@@ -1,0 +1,11 @@
+[package]
+name = "refactorign"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+clap = { version = "4.5.20", features = ["derive"] }
+
+[[bin]]
+name = "refactorign"
+path = "src/main.rs"
