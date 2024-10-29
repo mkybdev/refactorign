@@ -1,6 +1,9 @@
 use clap::Parser;
 use std::path::Path;
 
+mod basic_process;
+mod file;
+
 /// .gitignore file refactoring tool
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -15,7 +18,7 @@ struct Args {
 
     /// Refactoring level (1-3)
     #[arg(short, long, allow_hyphen_values = true, default_value_t = 2)]
-    level: i8,
+    level: isize,
 }
 
 fn validate_args(args: &Args) -> (&Path, u8) {
@@ -43,5 +46,8 @@ fn validate_args(args: &Args) -> (&Path, u8) {
 fn main() {
     let args = Args::parse();
     let (path, level) = validate_args(&args);
-    println!("Path: {:?}, Level: {}", path, level);
+
+    let mut f = file::File::new(path);
+    basic_process::remove_dupl(&mut f);
+    println!("{:?}", f.content);
 }
