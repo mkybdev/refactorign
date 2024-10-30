@@ -3,6 +3,7 @@ use std::path::Path;
 
 mod basic_process;
 mod file;
+mod tree;
 
 /// .gitignore file refactoring tool
 #[derive(Parser, Debug)]
@@ -49,5 +50,6 @@ fn main() {
 
     let mut f = file::File::new(path);
     basic_process::remove_dupl(&mut f);
-    println!("{:?}", f.content);
+    let tree = tree::DirectoryTreeNode::new(f);
+    println!("{}", tree);
 }
