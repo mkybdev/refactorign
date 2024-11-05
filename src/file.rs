@@ -1,6 +1,6 @@
 use std::path::Path;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct File {
     pub name: String,
     pub content: Vec<Line>,
@@ -33,15 +33,20 @@ impl File {
             }
         });
     }
+    pub fn print(&self) {
+        for line in self.content.iter() {
+            println!("{:?}", line);
+        }
+    }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Line {
     pub content: Content,
     pub line_number: usize,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Content {
     Comment(String),
     Pattern(String),
