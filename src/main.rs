@@ -4,6 +4,7 @@ use std::path::Path;
 mod basic_process;
 mod file;
 mod pattern;
+mod pattern_check;
 mod tree;
 
 /// .gitignore file refactoring tool
