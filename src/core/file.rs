@@ -38,9 +38,14 @@ impl File {
             }
         });
     }
-    pub fn print(&self) {
+    pub fn print_dbg(&self) {
         for line in self.content.iter() {
             println!("{:?}", line);
+        }
+    }
+    pub fn print(&self) {
+        for line in self.content.iter() {
+            println!("{}", line.content.unwrap());
         }
     }
 }
@@ -55,4 +60,12 @@ pub struct Line {
 pub enum Content {
     Comment(String),
     Pattern(String),
+}
+impl Content {
+    pub fn unwrap(&self) -> &str {
+        match self {
+            Content::Comment(c) => c,
+            Content::Pattern(p) => p,
+        }
+    }
 }

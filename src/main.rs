@@ -1,6 +1,7 @@
 extern crate refactorign;
 
 use clap::Parser;
+pub use refactorign::core;
 pub use refactorign::Refactor;
 use std::path::Path;
 

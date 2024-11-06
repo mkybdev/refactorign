@@ -31,6 +31,7 @@ impl Refactor {
         let refactor = Refactor {
             state: State { file, level, tree },
         };
-        refactor.re_include().containment().merge();
+        let result = refactor.re_include().containment().merge();
+        result.state.file.print();
     }
 }
