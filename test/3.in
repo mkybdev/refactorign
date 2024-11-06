@@ -1,6 +1,6 @@
 # test
 a
-!b/
+!b/*
 b/c
 *.py[cod]
 a/file-[123]

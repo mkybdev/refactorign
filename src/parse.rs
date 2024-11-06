@@ -1,14 +1,16 @@
+use crate::pattern::Kind;
+
 peg::parser! {
     grammar pattern_parser() for str {
-        pub rule pattern() = negation() / path()
+        pub rule pattern() -> Kind = negation() / path()
 
-        pub rule negation() = "!" path()
+        pub rule negation() -> Kind = "!" p:(path()) { Kind::Negation(Box::new(p)) }
 
-        pub rule path() = global() / normal()
+        pub rule path() -> Kind = global() / normal()
 
-        pub rule global() = wildcard() / string()!"/"
+        pub rule global() -> Kind = (wildcard() / string()!"/") "/"? { Kind::Global }
 
-        pub rule normal() = ((string() "/")+ / ("/" (string() "/")*)) string()?
+        pub rule normal() -> Kind = ((string() "/")+ / ("/" (string() "/")*)) (string() / "*")? { Kind::Normal }
 
         pub rule wildcard() = "*" string()
 
@@ -26,8 +28,11 @@ peg::parser! {
     }
 }
 
-pub fn check(l: &str) -> bool {
-    pattern_parser::pattern(l).is_ok()
+pub fn parse(l: &str) -> Option<Kind> {
+    match pattern_parser::pattern(l) {
+        Ok(k) => Some(k),
+        Err(_) => None,
+    }
 }
 
 #[test]
@@ -48,6 +53,8 @@ fn test() {
         "a[1-3A-C]/b/c",
         "!a",
         "!*.txt",
+        "!a/b/c/*",
+        "a/*",
         "![a-z]",
         "![abc]",
         "![a-zABC]",
@@ -58,10 +65,10 @@ fn test() {
         "!a[1-3A-C]/b/c",
     ];
     for p in ok_pat.iter() {
-        assert!(check(p), "{}", p);
+        assert!(parse(p).is_some(), "{}", p);
     }
-    let ng_pat = ["", "*", "**", "*a/b", "a/*", "[a-z", "a//", "!!a"];
+    let ng_pat = ["", "*", "**", "*a/b", "[a-z", "a//", "!!a", "a/b.*"];
     for p in ng_pat.iter() {
-        assert!(!check(p), "{}", p);
+        assert!(parse(p).is_none(), "{}", p);
     }
 }
