@@ -1,4 +1,4 @@
-use crate::basic_process::parse::parse;
+use crate::core::parse;
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Pattern {
@@ -7,7 +7,7 @@ pub struct Pattern {
 }
 impl Pattern {
     pub fn new(l: String) -> Self {
-        match parse(&l) {
+        match parse::parse(&l) {
             Some(k) => Self {
                 kind: k,
                 path: remove_slash(&l),

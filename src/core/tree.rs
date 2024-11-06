@@ -1,6 +1,6 @@
 use fs_tree::FsTree;
 
-use crate::basic_process::pattern::{Kind, Pattern};
+use crate::core::pattern::{Kind, Pattern};
 
 #[derive(Debug, Clone)]
 pub struct DirectoryTree {

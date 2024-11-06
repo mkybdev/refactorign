@@ -1,8 +1,8 @@
-use clap::Parser;
-use std::path::Path;
+extern crate refactorign;
 
-mod basic_process;
-use basic_process::run as bp;
+use clap::Parser;
+pub use refactorign::Refactor;
+use std::path::Path;
 
 /// .gitignore file refactoring tool
 #[derive(Parser, Debug)]
@@ -46,8 +46,5 @@ fn validate_args(args: &Args) -> (&Path, u8) {
 fn main() {
     let args = Args::parse();
     let (path, level) = validate_args(&args);
-
-    let tree = bp::run(path);
-    println!("{:?}", tree.root);
-    println!("{:?}", tree.re_included_nodes);
+    let result = Refactor::run(path, level);
 }

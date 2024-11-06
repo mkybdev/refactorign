@@ -1,14 +1,15 @@
-use std::path::Path;
+use std::path::PathBuf;
 
 #[derive(Debug, Clone)]
 pub struct File {
     pub name: String,
+    pub path: PathBuf,
     pub content: Vec<Line>,
 }
 impl File {
-    pub fn new(f: &Path) -> Self {
+    pub fn new(f: PathBuf) -> Self {
         let name = f.file_name().unwrap().to_str().unwrap().to_string();
-        let content = std::fs::read_to_string(f)
+        let content = std::fs::read_to_string(f.clone())
             .unwrap()
             .lines()
             .enumerate()
@@ -20,7 +21,11 @@ impl File {
                 line_number: i + 1,
             })
             .collect();
-        Self { name, content }
+        Self {
+            name,
+            path: f,
+            content,
+        }
     }
     pub fn get(&self, i: usize) -> &Line {
         &self.content[i]

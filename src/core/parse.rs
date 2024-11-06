@@ -1,4 +1,4 @@
-use crate::basic_process::pattern::Kind;
+use crate::pattern::Kind;
 
 peg::parser! {
     grammar pattern_parser() for str {
