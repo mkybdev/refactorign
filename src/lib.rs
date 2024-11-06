@@ -1,5 +1,5 @@
 pub use core::{file, parse, pattern, tree};
-pub use refactor::Refactor;
+pub use process::refactor::Refactor;
 
 pub mod core {
     pub mod file;
@@ -8,8 +8,10 @@ pub mod core {
     pub mod tree;
 }
 
-pub mod basic_process;
-pub mod re_include;
-pub mod containment;
-pub mod merge;
-pub mod refactor;
+pub mod process {
+    pub mod basic_process;
+    pub mod containment;
+    pub mod merge;
+    pub mod re_include;
+    pub mod refactor;
+}

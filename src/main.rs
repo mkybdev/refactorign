@@ -46,5 +46,5 @@ fn validate_args(args: &Args) -> (&Path, u8) {
 fn main() {
     let args = Args::parse();
     let (path, level) = validate_args(&args);
-    let result = Refactor::run(path, level);
+    Refactor::run(path, level);
 }
