@@ -2,10 +2,7 @@ use clap::Parser;
 use std::path::Path;
 
 mod basic_process;
-mod file;
-mod pattern;
-mod parse;
-mod tree;
+use basic_process::run as bp;
 
 /// .gitignore file refactoring tool
 #[derive(Parser, Debug)]
@@ -50,8 +47,7 @@ fn main() {
     let args = Args::parse();
     let (path, level) = validate_args(&args);
 
-    let mut f = file::File::new(path);
-    let tree = basic_process::basic_process(&mut f);
+    let tree = bp::run(path);
     println!("{:?}", tree.root);
     println!("{:?}", tree.re_included_nodes);
 }
