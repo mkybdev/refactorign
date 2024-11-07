@@ -1,10 +1,6 @@
-use std::{
-    fs::{self, ReadDir},
-    path::PathBuf,
-};
+use std::{fs, path::PathBuf};
 
 use fs_tree::FsTree;
-use walkdir::WalkDir;
 
 use super::refactor::Refactor;
 
@@ -47,13 +43,13 @@ impl Refactor {
                             for child_path in
                                 ign_children.keys().map(|child| parent_path.join(child))
                             {
-                                if verbose {
-                                    println!("Removing line: {:?}", child_path);
-                                }
-                                file.remove_line_with_path(child_path);
+                                file.remove_line_with_path(child_path, verbose);
                             }
                             // ignore parent
-                            file.add_line(parent_path.join("*").to_str().unwrap().to_string());
+                            file.add_line(
+                                parent_path.join("*").to_str().unwrap().to_string(),
+                                verbose,
+                            );
                             // re-include child(ren) not ignored
                             for child in children {
                                 let child_path = child.strip_prefix(&root).unwrap();
@@ -62,7 +58,8 @@ impl Refactor {
                                     .find(|&path| parent_path.join(path) == child_path)
                                     .is_none()
                                 {
-                                    file.add_line(format!("!{}", child_path.to_str().unwrap()));
+                                    let new_line = format!("!{}", child_path.to_str().unwrap());
+                                    file.add_line(new_line, verbose);
                                 }
                             }
                         }
@@ -71,5 +68,26 @@ impl Refactor {
             }
         }
         self
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::process::test;
+    #[test]
+    fn test_re_include() {
+        for path in test::get_input_paths("re_include") {
+            for level in 1..=3 {
+                test::show_title(&path, level);
+                let refactor = &mut Refactor::new(&path, level, true);
+                let result = refactor.basic_process().re_include();
+                assert!(test::file_cmp(
+                    result.file(),
+                    test::get_expected_path(&path)
+                ));
+                test::show_result(&result.file());
+            }
+        }
     }
 }

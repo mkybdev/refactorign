@@ -14,4 +14,5 @@ pub mod process {
     pub mod merge;
     pub mod re_include;
     pub mod refactor;
+    mod test;
 }
