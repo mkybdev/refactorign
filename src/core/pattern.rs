@@ -1,4 +1,4 @@
-use crate::core::parse;
+use super::parse;
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Pattern {
