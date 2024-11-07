@@ -1,14 +1,18 @@
-use std::fs;
+use walkdir::WalkDir;
 
 extern crate refactorign;
 
 #[test]
-fn test() {
-    for entry in fs::read_dir("tests/data").unwrap() {
-        let path = entry.unwrap().path();
+fn integration_test() {
+    for entry in WalkDir::new("tests/data")
+        .into_iter()
+        .filter_map(Result::ok)
+    {
+        let path = entry.path();
         if path.ends_with("gitignore") {
             for level in 1..=3 {
-                refactorign::Refactor::run(&path, level);
+                let result = refactorign::Refactor::run(&path, level);
+                result.file().print();
             }
         }
     }
