@@ -10,9 +10,12 @@ fn integration_test() {
     {
         let path = entry.path();
         if path.ends_with("gitignore") {
-            for level in 1..=3 {
-                let result = refactorign::Refactor::run(&path, level);
+            for level in 1..=1 {
+                println!("\r\n{:?}: ------------------------\r\n", path);
+                let result = refactorign::Refactor::run_verbose(&path, level);
+                println!("\r\nResult: ------------------------\r\n");
                 result.file().print();
+                println!("\r\n------------------------\r\n");
             }
         }
     }

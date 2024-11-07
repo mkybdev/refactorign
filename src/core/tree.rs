@@ -11,7 +11,7 @@ pub struct DirectoryTree {
     pub root: FsTree,
     pub globals: Vec<PathBuf>,
     pub re_included_nodes: Vec<FsTree>,
-    pub node_line_map: HashMap<FsTree, Line>,
+    pub node_line_map: HashMap<PathBuf, Line>,
 }
 impl DirectoryTree {
     pub fn new() -> Self {
@@ -40,8 +40,7 @@ impl DirectoryTree {
                         self.root.insert(current.clone(), FsTree::new_dir());
                     }
                 }
-                self.node_line_map
-                    .insert(self.root.get(&current).unwrap().clone(), line);
+                self.node_line_map.insert(PathBuf::from(current), line);
             }
             Kind::Negation(k) => {
                 if let Kind::Normal = *k {

@@ -44,6 +44,22 @@ impl File {
             }
         });
     }
+    pub fn remove_line_with_path(&mut self, path: PathBuf) {
+        let i = self
+            .content
+            .iter()
+            .position(|l| match &l.content {
+                Content::Pattern(p) => p == path.to_str().unwrap(),
+                _ => false,
+            })
+            .unwrap();
+        self.content.remove(i);
+        self.content.iter_mut().for_each(|l| {
+            if l.line_number > i {
+                l.line_number -= 1;
+            }
+        });
+    }
     pub fn remove_dupl(&mut self) {
         let mut i = 0;
         while i < self.content.len() {
