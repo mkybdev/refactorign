@@ -1,23 +1,31 @@
+use std::{collections::HashMap, path::PathBuf};
+
 use fs_tree::FsTree;
 
-use crate::core::pattern::{Kind, Pattern};
+use super::pattern::{Kind, Pattern};
+
+use super::file::Line;
 
 #[derive(Debug, Clone)]
 pub struct DirectoryTree {
     pub root: FsTree,
+    pub globals: Vec<PathBuf>,
     pub re_included_nodes: Vec<FsTree>,
+    pub node_line_map: HashMap<FsTree, Line>,
 }
 impl DirectoryTree {
     pub fn new() -> Self {
         Self {
             root: FsTree::new_dir(),
+            globals: Vec::new(),
             re_included_nodes: Vec::new(),
+            node_line_map: HashMap::new(),
         }
     }
-    pub fn add(&mut self, pattern: Pattern) {
+    pub fn add(&mut self, pattern: Pattern, line: Line) {
         match pattern.kind {
             Kind::Global => {
-                return;
+                self.globals.push(PathBuf::from(pattern.path));
             }
             Kind::Normal => {
                 let mut current = String::new();
@@ -32,6 +40,8 @@ impl DirectoryTree {
                         self.root.insert(current.clone(), FsTree::new_dir());
                     }
                 }
+                self.node_line_map
+                    .insert(self.root.get(&current).unwrap().clone(), line);
             }
             Kind::Negation(k) => {
                 if let Kind::Normal = *k {

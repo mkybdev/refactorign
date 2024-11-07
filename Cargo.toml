@@ -8,6 +8,7 @@ clap = { version = "4.5.20", features = ["derive"] }
 fs-tree = "0.6.0"
 peg = "0.8.4"
 peg-runtime = "0.8.3"
+walkdir = "2.5.0"
 
 [[bin]]
 name = "refactorign"

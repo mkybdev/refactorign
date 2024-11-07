@@ -7,9 +7,9 @@ pub struct File {
     pub content: Vec<Line>,
 }
 impl File {
-    pub fn new(f: PathBuf) -> Self {
-        let name = f.file_name().unwrap().to_str().unwrap().to_string();
-        let content = std::fs::read_to_string(f.clone())
+    pub fn new(path: PathBuf) -> Self {
+        let name = path.file_name().unwrap().to_str().unwrap().to_string();
+        let content = std::fs::read_to_string(path.clone())
             .unwrap()
             .lines()
             .enumerate()
@@ -23,20 +23,40 @@ impl File {
             .collect();
         Self {
             name,
-            path: f,
+            path,
             content,
         }
     }
-    pub fn get(&self, i: usize) -> &Line {
+    pub fn get_line(&self, i: usize) -> &Line {
         &self.content[i]
     }
-    pub fn remove(&mut self, i: usize) {
+    pub fn add_line(&mut self, l: String) {
+        self.content.push(Line {
+            content: Content::Pattern(l),
+            line_number: self.content.len() + 1,
+        });
+    }
+    pub fn remove_line(&mut self, i: usize) {
         self.content.remove(i);
         self.content.iter_mut().for_each(|l| {
             if l.line_number > i {
                 l.line_number -= 1;
             }
         });
+    }
+    pub fn remove_dupl(&mut self) {
+        let mut i = 0;
+        while i < self.content.len() {
+            let mut j = i + 1;
+            while j < self.content.len() {
+                if self.get_line(i).content == self.get_line(j).content {
+                    self.remove_line(j);
+                } else {
+                    j += 1;
+                }
+            }
+            i += 1;
+        }
     }
     pub fn print_dbg(&self) {
         for line in self.content.iter() {
