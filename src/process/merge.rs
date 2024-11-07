@@ -1,7 +1,7 @@
-use crate::process::refactor::Refactor;
+use super::refactor::Refactor;
 
 impl Refactor {
-    pub fn merge(self) -> Self {
+    pub fn merge(&mut self) -> &mut Self {
         self
     }
 }

@@ -1,7 +1,7 @@
-use crate::process::refactor::Refactor;
+use super::refactor::Refactor;
 
 impl Refactor {
-    pub fn containment(self) -> Self {
+    pub fn containment(&mut self) -> &mut Self {
         self
     }
 }
