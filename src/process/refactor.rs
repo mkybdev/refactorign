@@ -1,6 +1,5 @@
 use crate::core::{file::File, tree::DirectoryTree};
 use std::cell::{Ref, RefCell};
-use std::ops::Deref;
 use std::path::{Path, PathBuf};
 
 #[derive(Clone)]
@@ -21,13 +20,6 @@ impl StateFileValue<'_> {
         &self.value
     }
 }
-
-// impl<'b> Deref for StateFileValue<'b> {
-//     type Target = File;
-//     fn deref(&self) -> &File {
-//         &self.value
-//     }
-// }
 
 impl State {
     pub fn new(path: &Path, level: u8, verbose: bool) -> Self {

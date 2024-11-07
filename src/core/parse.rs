@@ -39,7 +39,7 @@ pub fn parse(l: &str) -> Option<Kind> {
 mod tests {
     use super::*;
     #[test]
-    fn test() {
+    fn test_parse() {
         let ok_pat = [
             "a",
             "*.txt",

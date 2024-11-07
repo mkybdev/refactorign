@@ -20,7 +20,7 @@ impl File {
                 },
                 line_number: i + 1,
             })
-            .collect();
+            .collect::<Vec<Line>>();
         Self {
             name,
             path,
@@ -30,11 +30,14 @@ impl File {
     pub fn get_line(&self, i: usize) -> &Line {
         &self.content[i]
     }
-    pub fn add_line(&mut self, l: String) {
+    pub fn add_line(&mut self, l: String, verbose: bool) {
         self.content.push(Line {
-            content: Content::Pattern(l),
+            content: Content::Pattern(l.clone()),
             line_number: self.content.len() + 1,
         });
+        if verbose {
+            println!("Added: {}", l);
+        }
     }
     pub fn remove_line(&mut self, i: usize) {
         self.content.remove(i);
@@ -44,7 +47,7 @@ impl File {
             }
         });
     }
-    pub fn remove_line_with_path(&mut self, path: PathBuf) {
+    pub fn remove_line_with_path(&mut self, path: PathBuf, verbose: bool) {
         let i = self
             .content
             .iter()
@@ -59,6 +62,9 @@ impl File {
                 l.line_number -= 1;
             }
         });
+        if verbose {
+            println!("Removed: {:?}", path);
+        }
     }
     pub fn remove_dupl(&mut self) {
         let mut i = 0;
