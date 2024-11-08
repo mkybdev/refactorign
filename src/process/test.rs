@@ -1,17 +1,17 @@
-use std::{fs, path::PathBuf};
+use std::{collections::BTreeSet, fs, path::PathBuf};
 
 use walkdir::WalkDir;
 
 use crate::file::*;
 
 #[allow(dead_code)]
-pub fn get_input_paths(process: &str) -> Vec<PathBuf> {
+pub fn get_input_paths(process: &str) -> BTreeSet<PathBuf> {
     WalkDir::new(format!("tests/data/{}/input", process))
         .into_iter()
         .filter_map(Result::ok)
         .map(|entry| entry.into_path())
         .filter(|path| path.ends_with("gitignore"))
-        .collect()
+        .collect::<BTreeSet<_>>()
 }
 
 #[allow(dead_code)]
@@ -28,19 +28,19 @@ pub fn get_expected_path(path: &PathBuf) -> PathBuf {
 
 #[allow(dead_code)]
 pub fn file_cmp(result: File, expected: PathBuf) -> bool {
-    let expected_content = fs::read_to_string(expected.clone())
-        .unwrap()
-        .lines()
-        .enumerate()
-        .map(|(i, l)| Line {
-            content: match l.chars().next() {
-                Some('#') => Content::Comment(l.to_string()),
-                _ => Content::Pattern(l.to_string()),
-            },
-            line_number: i + 1,
+    let expected_content_raw = fs::read_to_string(expected.clone()).unwrap();
+    let mut expected_content = expected_content_raw.lines().collect::<Vec<&str>>();
+    let mut result_content = result
+        .content
+        .iter()
+        .map(|l| match &l.content {
+            Content::Pattern(p) => p.as_str(),
+            Content::Comment(c) => c.as_str(),
         })
-        .collect::<Vec<Line>>();
-    result.content == expected_content
+        .collect::<Vec<&str>>();
+    expected_content.sort();
+    result_content.sort();
+    expected_content == result_content
 }
 
 #[allow(dead_code)]

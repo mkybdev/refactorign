@@ -16,3 +16,6 @@ pub mod process {
     pub mod refactor;
     mod test;
 }
+
+#[macro_use]
+mod macros;
