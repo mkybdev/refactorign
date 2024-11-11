@@ -14,9 +14,13 @@ impl File {
             .lines()
             .enumerate()
             .map(|(i, l)| Line {
-                content: match l.chars().next() {
-                    Some('#') => Content::Comment(l.to_string()),
-                    _ => Content::Pattern(l.to_string()),
+                content: if l.trim().is_empty() {
+                    Content::Blank()
+                } else {
+                    match l.chars().next() {
+                        Some('#') => Content::Comment(l.to_string()),
+                        _ => Content::Pattern(l.to_string()),
+                    }
                 },
                 line_number: i + 1,
             })
@@ -101,12 +105,14 @@ pub struct Line {
 #[derive(Debug, PartialEq, Clone)]
 pub enum Content {
     Comment(String),
+    Blank(),
     Pattern(String),
 }
 impl Content {
     pub fn unwrap(&self) -> &str {
         match self {
             Content::Comment(c) => c,
+            Content::Blank() => "",
             Content::Pattern(p) => p,
         }
     }

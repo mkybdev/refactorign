@@ -35,6 +35,7 @@ pub fn file_cmp(result: File, expected: PathBuf) -> bool {
         .iter()
         .map(|l| match &l.content {
             Content::Pattern(p) => p.as_str(),
+            Content::Blank() => "",
             Content::Comment(c) => c.as_str(),
         })
         .collect::<Vec<&str>>();
