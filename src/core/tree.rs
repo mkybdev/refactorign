@@ -24,7 +24,7 @@ impl DirectoryTree {
     }
     pub fn add(&mut self, pattern: Pattern, line: Line) {
         match pattern.kind {
-            Kind::Global => {
+            Kind::Global | Kind::Wildcard => {
                 self.globals.push(PathBuf::from(pattern.path));
             }
             Kind::Normal => {

@@ -34,6 +34,7 @@ fn remove_slash(l: &str) -> String {
 #[derive(Debug, PartialEq, Clone)]
 pub enum Kind {
     Negation(Box<Kind>),
+    Wildcard,
     Global,
     Normal,
 }
