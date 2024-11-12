@@ -66,6 +66,9 @@ impl Refactor {
     pub fn tree_mut(&mut self) -> &mut DirectoryTree {
         &mut self.state.tree
     }
+    pub fn rebuild_tree(&mut self) {
+        self.state.tree = DirectoryTree::build_tree_from_file(&self.file());
+    }
     pub fn run(path: &Path, level: u8) -> Refactor {
         let refactor = &mut Refactor::new(path, level, false);
         refactor

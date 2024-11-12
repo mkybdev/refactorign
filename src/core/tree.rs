@@ -4,7 +4,7 @@ use fs_tree::FsTree;
 
 use super::pattern::{Kind, Pattern};
 
-use super::file::Line;
+use super::file::{Content, File, Line};
 
 #[derive(Debug, Clone)]
 pub struct DirectoryTree {
@@ -22,7 +22,17 @@ impl DirectoryTree {
             node_line_map: HashMap::new(),
         }
     }
-    pub fn add(&mut self, pattern:  Pattern, line: Line) {
+    pub fn build_tree_from_file(f: &File) -> DirectoryTree {
+        let mut tree = DirectoryTree::new();
+        for line in f.content.iter() {
+            if let Content::Pattern(pat) = &line.content {
+                let pattern = Pattern::new(pat.to_string());
+                tree.add(pattern, line.clone());
+            }
+        }
+        tree
+    }
+    pub fn add(&mut self, pattern: Pattern, line: Line) {
         match pattern.kind {
             Kind::Global | Kind::Wildcard => {
                 self.globals.insert(pattern.path, pattern.kind);
