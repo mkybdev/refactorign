@@ -133,7 +133,7 @@ impl Refactor {
         let verbose = self.verbose().clone();
         let root = self.root().clone();
         let tree = self.tree().clone();
-        let file = self.file_mut();
+        let file = self.file().clone();
         if verbose {
             printv!(root, tree);
         }
@@ -171,6 +171,7 @@ impl Refactor {
                             printv!(parent_path, ign_children, ign_children_lines, children);
                         }
                         if 1 + children_num - ign_children_num < ign_children_lines_num {
+                            let file = self.file_mut();
                             // remove lines
                             for child_path in ign_children_lines.clone().into_iter() {
                                 file.remove_line_with_path(child_path, verbose);
