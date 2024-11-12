@@ -9,23 +9,23 @@ use super::file::Line;
 #[derive(Debug, Clone)]
 pub struct DirectoryTree {
     pub root: FsTree,
-    pub globals: Vec<PathBuf>,
-    pub re_included_nodes: Vec<FsTree>,
+    pub globals: HashMap<String, Kind>,
+    pub re_included: HashMap<String, Kind>,
     pub node_line_map: HashMap<PathBuf, Line>,
 }
 impl DirectoryTree {
     pub fn new() -> Self {
         Self {
             root: FsTree::new_dir(),
-            globals: Vec::new(),
-            re_included_nodes: Vec::new(),
+            globals: HashMap::new(),
+            re_included: HashMap::new(),
             node_line_map: HashMap::new(),
         }
     }
-    pub fn add(&mut self, pattern: Pattern, line: Line) {
+    pub fn add(&mut self, pattern:  Pattern, line: Line) {
         match pattern.kind {
             Kind::Global | Kind::Wildcard => {
-                self.globals.push(PathBuf::from(pattern.path));
+                self.globals.insert(pattern.path, pattern.kind);
             }
             Kind::Normal => {
                 let mut current = String::new();
@@ -43,11 +43,10 @@ impl DirectoryTree {
                 self.node_line_map.insert(PathBuf::from(current), line);
             }
             Kind::Negation(k) => {
-                if let Kind::Normal = *k {
-                    if let Some(node) = self.root.get(pattern.path) {
-                        self.re_included_nodes.push(node.clone());
-                    }
+                if let Kind::Wildcard = *k {
+                    panic!("Negation of wildcard is not allowed");
                 }
+                self.re_included.insert(pattern.path, *k);
             }
         }
     }
