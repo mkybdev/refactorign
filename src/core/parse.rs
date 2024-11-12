@@ -15,15 +15,14 @@ peg::parser! {
         pub rule wildcard() -> Kind = "*" string() { Kind::Wildcard }
 
         // pub rule global() -> Kind = (wildcard() / string()!"/") "/"? { Kind::Global }
-        pub rule global() -> Kind = string()!"/" "/"? { Kind::Global }
+        pub rule global() -> Kind = string()!"/" { Kind::Global }
 
         // pub rule normal() -> Kind = ((string() "/")+ / ("/" (string() "/")*)) (string() / "*")? { Kind::Normal }
-        pub rule normal() -> Kind = ((string() "/")+ / ("/" (string() "/")*)) string()? { Kind::Normal }
+        pub rule normal() -> Kind = "/"? (string() ** "/") { Kind::Normal }
 
         #[cache_left_rec]
         pub rule string() = (range_notation() / char()) string()?
 
-        // pub rule range_notation() = "[" char()+ "]"
         pub rule range_notation() = "[" ranges()+ "]"
 
         #[cache_left_rec]
@@ -35,10 +34,18 @@ peg::parser! {
     }
 }
 
+#[allow(unused_variables)]
 pub fn parse(l: &str) -> Option<Kind> {
-    match pattern_parser::pattern(l) {
+    let stripped = l.strip_suffix("/").unwrap_or(l);
+    if stripped.is_empty() {
+        return Some(Kind::Normal);
+    }
+    match pattern_parser::pattern(stripped) {
         Ok(k) => Some(k),
-        Err(_) => None,
+        Err(e) => {
+            // eprintln!("Parse Error: {}", e);
+            None
+        }
     }
 }
 
@@ -48,37 +55,33 @@ mod tests {
     #[test]
     fn test_parse() {
         let ok_pat = [
-            "a",
-            "*.txt",
-            "[a-z]",
-            "[abc]",
-            "[a-zABC]",
-            "*.py[cod]",
-            "/",
-            "a/",
-            "/a",
-            "a/b",
-            "a/b/c",
-            "a[1-3]/b",
-            "a[1-3A-C]/b/c",
-            "!a",
-            // "!*.txt",
-            // "!a/b/c/*",
-            // "a/*",
-            "![a-z]",
-            "![abc]",
-            "![a-zABC]",
-            // "!*.py[cod]",
-            "!a/b",
-            "!a/b/c",
-            "!a[1-3]/b",
-            "!a[1-3A-C]/b/c",
+            ("a", Kind::Global),
+            ("*.txt", Kind::Wildcard),
+            ("[a-z]", Kind::Global),
+            ("[abc]", Kind::Global),
+            ("[a-zABC]", Kind::Global),
+            ("*.py[cod]", Kind::Wildcard),
+            ("/", Kind::Normal),
+            ("a/", Kind::Global),
+            ("/a", Kind::Normal),
+            ("a/b", Kind::Normal),
+            ("a/b/c", Kind::Normal),
+            ("a[1-3]/b", Kind::Normal),
+            ("a[1-3A-C]/b/c", Kind::Normal),
+            ("!a", Kind::Negation(Box::new(Kind::Global))),
+            ("![a-z]", Kind::Negation(Box::new(Kind::Global))),
+            ("![abc]", Kind::Negation(Box::new(Kind::Global))),
+            ("![a-zABC]", Kind::Negation(Box::new(Kind::Global))),
+            ("!a/b", Kind::Negation(Box::new(Kind::Normal))),
+            ("!a/b/c", Kind::Negation(Box::new(Kind::Normal))),
+            ("!a[1-3]/b", Kind::Negation(Box::new(Kind::Normal))),
+            ("!a[1-3A-C]/b/c", Kind::Negation(Box::new(Kind::Normal))),
+            ("", Kind::Normal),
         ];
-        for p in ok_pat.iter() {
-            assert!(parse(p).is_some(), "{}", p);
+        for (p, k) in ok_pat.into_iter() {
+            assert_eq!(parse(p), Some(k), "Failed: {:?}", p);
         }
         let ng_pat = [
-            "",
             "*",
             "**",
             "*a/b",
@@ -92,7 +95,7 @@ mod tests {
             "!*.py[cod]",
         ];
         for p in ng_pat.iter() {
-            assert!(parse(p).is_none(), "{}", p);
+            assert!(parse(p).is_none(), "Failed: {:?}", p);
         }
     }
 }
