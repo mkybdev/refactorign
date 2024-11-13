@@ -69,6 +69,23 @@ impl Refactor {
     pub fn rebuild_tree(&mut self) {
         self.state.tree = DirectoryTree::build_tree_from_file(&self.file());
     }
+    pub fn update(&mut self) {
+        self.rebuild_tree();
+    }
+    pub fn is_normally_ignored(&self, path: &Path) -> bool {
+        self.tree().node_line_map.get(path).is_some()
+    }
+    pub fn is_globally_ignored(&self, path: &Path) -> bool {
+        let file_name = path.file_name().unwrap().to_str().unwrap();
+        self.tree()
+            .globals
+            .keys()
+            .find(|&x| x == file_name || x[1..] == file_name[1..])
+            .is_some()
+    }
+    pub fn is_ignored(&self, path: &Path) -> bool {
+        self.is_normally_ignored(path) || self.is_globally_ignored(path)
+    }
     pub fn run(path: &Path, level: u8) -> Refactor {
         let refactor = &mut Refactor::new(path, level, false);
         refactor
