@@ -43,13 +43,27 @@ impl File {
             println!("Added: {}", l);
         }
     }
-    pub fn remove_line(&mut self, i: usize) {
-        self.content.remove(i);
+    pub fn remove_line(&mut self, l: String, verbose: bool) {
+        let i = self
+            .content
+            .iter()
+            .position(|line| match &line.content {
+                Content::Pattern(p) => *p == l,
+                _ => false,
+            })
+            .unwrap();
+        self.remove_line_with_index(i, verbose);
+    }
+    pub fn remove_line_with_index(&mut self, i: usize, verbose: bool) {
+        let removed = self.content.remove(i);
         self.content.iter_mut().for_each(|l| {
             if l.line_number > i {
                 l.line_number -= 1;
             }
         });
+        if verbose {
+            println!("Removed: {}", removed.content.unwrap());
+        }
     }
     pub fn remove_line_with_path(&mut self, path: PathBuf, verbose: bool) {
         let i = self
@@ -73,12 +87,15 @@ impl File {
     pub fn remove_dupl(&mut self) {
         let mut i = 0;
         while i < self.content.len() {
-            let mut j = i + 1;
-            while j < self.content.len() {
-                if self.get_line(i).content == self.get_line(j).content {
-                    self.remove_line(j);
-                } else {
-                    j += 1;
+            let target = self.get_line(i).content.clone();
+            if let Content::Pattern(_) = target {
+                let mut j = i + 1;
+                while j < self.content.len() {
+                    if target == self.get_line(j).content {
+                        self.remove_line_with_index(j, false);
+                    } else {
+                        j += 1;
+                    }
                 }
             }
             i += 1;
