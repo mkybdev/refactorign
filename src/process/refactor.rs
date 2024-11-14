@@ -48,6 +48,9 @@ impl Refactor {
     pub fn verbose(&self) -> bool {
         self.state.verbose
     }
+    pub fn level(&self) -> u8 {
+        self.state.level
+    }
     pub fn file(&self) -> File {
         let value = StateFileValue {
             value: self.state.file.borrow(),
