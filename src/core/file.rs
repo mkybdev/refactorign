@@ -101,6 +101,26 @@ impl File {
             i += 1;
         }
     }
+    pub fn replace_line_with_index(&mut self, i: usize, l: String, verbose: bool) {
+        self.content[i] = Line {
+            content: Content::Pattern(l.clone()),
+            line_number: i + 1,
+        };
+        if verbose {
+            println!("Replaced: {}", l);
+        }
+    }
+    pub fn replace_line(&mut self, from: String, to: String, verbose: bool) {
+        let i = self
+            .content
+            .iter()
+            .position(|line| match &line.content {
+                Content::Pattern(p) => *p == from,
+                _ => false,
+            })
+            .unwrap();
+        self.replace_line_with_index(i, to, verbose);
+    }
     pub fn print_dbg(&self) {
         for line in self.content.iter() {
             println!("{:?}", line);
