@@ -203,15 +203,15 @@ mod tests {
     use crate::process::test;
     #[test]
     fn test_re_include() {
-        for path in test::get_input_paths("re_include") {
-            for level in 1..=1 {
+        for level in 1..=1 {
+            for path in test::get_input_paths("re_include") {
                 test::show_title(&path, level);
                 let refactor = &mut Refactor::new(&path, level, true);
                 let result = refactor.basic_process().re_include();
                 test::show_result(&result.file());
                 assert!(test::file_cmp(
                     result.file(),
-                    test::get_expected_path(&path)
+                    test::get_expected_path(&path, level)
                 ));
             }
         }

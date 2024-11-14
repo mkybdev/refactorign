@@ -15,15 +15,17 @@ pub fn get_input_paths(process: &str) -> BTreeSet<PathBuf> {
 }
 
 #[allow(dead_code)]
-pub fn get_expected_path(path: &PathBuf) -> PathBuf {
+pub fn get_expected_path(path: &PathBuf, level: u8) -> PathBuf {
     PathBuf::from(
         path.iter()
-            .take(5)
+            .take(4)
             .collect::<PathBuf>()
             .to_str()
             .unwrap()
             .replace("input", "expected"),
     )
+    .join(level.to_string())
+    .join(path.iter().nth(4).unwrap())
 }
 
 #[allow(dead_code)]

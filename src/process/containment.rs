@@ -45,15 +45,15 @@ mod tests {
     use crate::process::test;
     #[test]
     fn test_containment() {
-        for path in test::get_input_paths("containment") {
-            for level in 1..=1 {
+        for level in 1..=1 {
+            for path in test::get_input_paths("containment") {
                 test::show_title(&path, level);
                 let refactor = &mut Refactor::new(&path, level, true);
                 let result = refactor.basic_process().containment();
                 test::show_result(&result.file());
                 assert!(test::file_cmp(
                     result.file(),
-                    test::get_expected_path(&path)
+                    test::get_expected_path(&path, level)
                 ));
             }
         }
