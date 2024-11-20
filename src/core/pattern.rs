@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::{collections::HashSet, path::PathBuf};
 
 use super::parse;
 
@@ -97,19 +97,89 @@ pub fn expand_range(pat: String) -> Vec<String> {
     res.into_iter().collect()
 }
 
+pub fn does_match(path: &PathBuf, pat: &String) -> bool {
+    let mut path_it = path.to_str().unwrap().chars();
+    let mut pat_it = pat.chars();
+    'outer: loop {
+        match (path_it.next(), pat_it.next()) {
+            (Some(_), Some('*')) => {
+                if let Some(pat_next) = pat_it.clone().next() {
+                    while let Some(c) = path_it.next() {
+                        if c == pat_next {
+                            pat_it.next();
+                            continue 'outer;
+                        }
+                    }
+                    return false;
+                } else {
+                    return true;
+                }
+            }
+            (Some(p), Some('[')) => {
+                let mut rg = "[".to_string();
+                while let Some(c) = pat_it.next() {
+                    rg.push(c);
+                    if c == ']' {
+                        break;
+                    }
+                }
+                let expanded = expand_range(rg);
+                if expanded.iter().any(|e| e.starts_with(p)) {
+                    continue 'outer;
+                } else {
+                    return false;
+                }
+            }
+            (Some(p), Some(p2)) => {
+                if p != p2 {
+                    return false;
+                }
+            }
+            (None, None) => return true,
+            _ => return false,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     #[test]
     fn test_expand_range() {
-        let mut expanded = expand_range("a[abc-ef][123]".to_string());
-        expanded.sort();
-        assert_eq!(
-            expanded,
-            vec![
-                "aa1", "aa2", "aa3", "ab1", "ab2", "ab3", "ac1", "ac2", "ac3", "ad1", "ad2", "ad3",
-                "ae1", "ae2", "ae3", "af1", "af2", "af3"
-            ]
-        );
+        let cases = vec![
+            ("[123a-d]", vec!["1", "2", "3", "a", "b", "c", "d"]),
+            ("a[abc]d", vec!["abd", "acd", "aad"]),
+            ("a[abc-ef]d", vec!["aad", "abd", "acd", "add", "aed", "afd"]),
+            (
+                "a[abc-ef][123]",
+                vec![
+                    "aa1", "aa2", "aa3", "ab1", "ab2", "ab3", "ac1", "ac2", "ac3", "ad1", "ad2",
+                    "ad3", "ae1", "ae2", "ae3", "af1", "af2", "af3",
+                ],
+            ),
+        ];
+        for (pat, mut expected) in cases {
+            let mut expanded = expand_range(pat.to_string());
+            expanded.sort();
+            expected.sort();
+            assert_eq!(expanded, expected);
+        }
+    }
+
+    #[test]
+    fn test_does_match() {
+        let cases = vec![
+            ("a/b", "a/b", true),
+            ("a/*.txt", "a/b.txt", true),
+            ("a/*.txt", "a/abc.txt", true),
+            ("a/*.txt", "a/.txt", false),
+            ("a/[a-d].txt", "a/b.txt", true),
+            ("a/[1-3a-d].txt", "a/e.txt", false),
+            ("a/*.py[cod]", "a/test.pyd", true),
+            ("a/*.py[cod]", "a/test.pyw", false),
+        ];
+        for (pat, path, expected) in cases {
+            assert_eq!(does_match(&PathBuf::from(path), &pat.to_string()), expected);
+        }
     }
 }
