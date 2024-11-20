@@ -40,7 +40,7 @@ impl File {
             line_number: self.content.len() + 1,
         });
         if verbose {
-            println!("Added: {}", l);
+            println!("Added: {}\r\n", l);
         }
     }
     pub fn remove_line(&mut self, l: String, verbose: bool) {
@@ -62,7 +62,7 @@ impl File {
             }
         });
         if verbose {
-            println!("Removed: {}", removed.content.unwrap());
+            println!("Removed: {}\r\n", removed.content.unwrap());
         }
     }
     pub fn remove_line_with_path(&mut self, path: PathBuf, verbose: bool) {
@@ -81,7 +81,7 @@ impl File {
             }
         });
         if verbose {
-            println!("Removed: {:?}", path);
+            println!("Removed: {:?}\r\n", path);
         }
     }
     pub fn remove_dupl(&mut self) {
@@ -102,12 +102,13 @@ impl File {
         }
     }
     pub fn replace_line_with_index(&mut self, i: usize, l: String, verbose: bool) {
+        let old = self.content[i].content.clone();
         self.content[i] = Line {
             content: Content::Pattern(l.clone()),
             line_number: i + 1,
         };
         if verbose {
-            println!("Replaced: {}", l);
+            println!("Replaced: {} -> {}\r\n", old.unwrap(), l);
         }
     }
     pub fn replace_line(&mut self, from: String, to: String, verbose: bool) {
