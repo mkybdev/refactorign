@@ -50,10 +50,3 @@ pub fn file_cmp(result: File, expected: PathBuf) -> bool {
 pub fn show_title(path: &PathBuf, level: u8) {
     println!("\r\n{:?} (level {}):\r\n", path, level);
 }
-
-#[allow(dead_code)]
-pub fn show_result(file: &File) {
-    println!("\r\nResult: --------------------------------------\r\n");
-    file.print();
-    println!("\r\n----------------------------------------------\r\n");
-}

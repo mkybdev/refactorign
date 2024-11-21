@@ -3,6 +3,7 @@ extern crate refactorign;
 use clap::Parser;
 pub use refactorign::core;
 pub use refactorign::Refactor;
+use refactorign::{show_input, show_result};
 use std::path::Path;
 
 /// .gitignore file refactoring tool
@@ -47,5 +48,7 @@ fn validate_args(args: &Args) -> (&Path, u8) {
 fn main() {
     let args = Args::parse();
     let (path, level) = validate_args(&args);
-    Refactor::run(path, level);
+    let result = Refactor::run(path, level);
+    show_input!(&result.orig_file());
+    show_result!(&result.file());
 }
