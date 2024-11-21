@@ -35,7 +35,15 @@ fn get_children(
                                 // if wildcard, compare with file name without the first character
                                 Kind::Global => *s == path_file.to_str().unwrap(),
                                 Kind::Normal => *s == parent_path.join(path_file).to_str().unwrap(),
-                                Kind::Wildcard => s[1..] == path_file.to_str().unwrap()[1..],
+                                Kind::Wildcard => {
+                                    s.chars().skip(1).collect::<String>()
+                                        == path_file
+                                            .to_str()
+                                            .unwrap()
+                                            .chars()
+                                            .skip(1)
+                                            .collect::<String>()
+                                }
                                 _ => panic!("Invalid Kind"),
                             })
                             .is_some()
@@ -140,7 +148,8 @@ impl Refactor {
         }
         // iterate over nodes (parent nodes)
         // parent nodes should not be ignored for re-including children
-        for parent_path in FsTree::read_at(&root).unwrap().paths() {
+        if let Ok(parent_tree) = FsTree::read_at(&root) {
+            for parent_path in parent_tree.paths() {
             if let Some(parent) = tree.root.get(parent_path.clone()) {
                 // check if parent is not ignored
                 if tree.node_line_map.get(&parent_path).is_none() {
@@ -194,6 +203,9 @@ impl Refactor {
                     }
                 }
             }
+            }
+        } else {
+            eprintln!("Failed to read directory tree. Aborting.");
         }
         self
     }

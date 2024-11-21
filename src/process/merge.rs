@@ -52,6 +52,10 @@ fn line_diff_string(
         })
         .collect::<Vec<Range<usize>>>();
 
+    if !set.clone().all(|line| line.clone().contains(&'.')) {
+        return None;
+    }
+
     if longest_subsequence.len() == 0 {
         None
     } else {

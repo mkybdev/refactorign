@@ -70,7 +70,7 @@ impl File {
             .content
             .iter()
             .position(|l| match &l.content {
-                Content::Pattern(p) => p == path.to_str().unwrap(),
+                Content::Pattern(p) => p.strip_prefix("/").unwrap_or(p) == path.to_str().unwrap(),
                 _ => false,
             })
             .unwrap();

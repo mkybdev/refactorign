@@ -14,7 +14,10 @@ impl Pattern {
                 kind: k,
                 path: remove_slash(&l),
             },
-            None => panic!("Invalid pattern: {}", l),
+            None => {
+                eprintln!("Invalid pattern found. Aborting.\r\nInvalid pattern: {}", l);
+                std::process::exit(1);
+            }
         }
     }
 }
