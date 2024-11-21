@@ -130,10 +130,11 @@ fn get_ign_children(
 
 impl Refactor {
     pub fn re_include(&mut self) -> &mut Self {
-        let verbose = self.verbose().clone();
-        let root = self.root().clone();
-        let tree = self.tree().clone();
-        let file = self.file().clone();
+        let (end, params) = self.get_borrows();
+        if end {
+            return self;
+        }
+        let (verbose, root, tree, file) = params;
         if verbose {
             printv!(root, tree);
         }
@@ -188,6 +189,7 @@ impl Refactor {
                                     file.add_line(new_line, verbose);
                                 }
                             }
+                            self.halt();
                         }
                     }
                 }
@@ -200,7 +202,7 @@ impl Refactor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::process::test;
+    use crate::{process::test, show_result};
     #[test]
     fn test_re_include() {
         for level in 1..=1 {
@@ -208,7 +210,7 @@ mod tests {
                 test::show_title(&path, level);
                 let refactor = &mut Refactor::new(&path, level, true);
                 let result = refactor.basic_process().re_include();
-                test::show_result(&result.file());
+                show_result!(&result.file());
                 assert!(test::file_cmp(
                     result.file(),
                     test::get_expected_path(&path, level)

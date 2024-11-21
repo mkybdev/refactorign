@@ -2,13 +2,15 @@ use crate::core::{file::File, tree::DirectoryTree};
 use std::cell::{Ref, RefCell};
 use std::path::{Path, PathBuf};
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct State {
     verbose: bool,
+    orig_file: File,
     file: RefCell<File>,
     pub root: PathBuf,
     pub level: u8,
     pub tree: DirectoryTree,
+    pub end: bool,
 }
 
 struct StateFileValue<'a> {
@@ -27,15 +29,17 @@ impl State {
         root.pop();
         State {
             verbose,
+            orig_file: File::new(path.to_path_buf()),
             file: RefCell::new(File::new(path.to_path_buf())),
             root,
             level,
             tree: DirectoryTree::new(),
+            end: false,
         }
     }
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct Refactor {
     pub state: State,
 }
@@ -50,6 +54,9 @@ impl Refactor {
     }
     pub fn level(&self) -> u8 {
         self.state.level
+    }
+    pub fn orig_file(&self) -> &File {
+        &self.state.orig_file
     }
     pub fn file(&self) -> File {
         let value = StateFileValue {
@@ -72,6 +79,20 @@ impl Refactor {
     pub fn rebuild_tree(&mut self) {
         self.state.tree = DirectoryTree::build_tree_from_file(&self.file());
     }
+    pub fn halt(&mut self) {
+        self.state.end = true;
+    }
+    pub fn end(&self) -> bool {
+        self.state.end
+    }
+    pub fn get_borrows(&self) -> (bool, (bool, PathBuf, DirectoryTree, File)) {
+        let end = self.end().clone();
+        let verbose = self.verbose().clone();
+        let root = self.root().clone();
+        let tree = self.tree().clone();
+        let file = self.file().clone();
+        (end, (verbose, root, tree, file))
+    }
     pub fn update(&mut self) {
         self.rebuild_tree();
     }
@@ -89,22 +110,19 @@ impl Refactor {
     pub fn is_ignored(&self, path: &Path) -> bool {
         self.is_normally_ignored(path) || self.is_globally_ignored(path)
     }
-    pub fn run(path: &Path, level: u8) -> Refactor {
-        let refactor = &mut Refactor::new(path, level, false);
+    fn run_inner(path: &Path, level: u8, verbose: bool) -> Refactor {
+        let refactor = &mut Refactor::new(path, level, verbose);
         refactor
             .basic_process()
-            .re_include()
             .containment()
+            .re_include()
             .merge()
             .clone()
     }
+    pub fn run(path: &Path, level: u8) -> Refactor {
+        Self::run_inner(path, level, false)
+    }
     pub fn run_verbose(path: &Path, level: u8) -> Refactor {
-        let refactor = &mut Refactor::new(path, level, true);
-        refactor
-            .basic_process()
-            .re_include()
-            .containment()
-            .merge()
-            .clone()
+        Self::run_inner(path, level, true)
     }
 }

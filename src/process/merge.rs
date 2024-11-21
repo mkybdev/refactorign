@@ -148,10 +148,14 @@ fn replace_ranges_with_wildcard(orig: &str, ranges: Vec<&(usize, String)>) -> St
 impl Refactor {
     pub fn merge(&mut self) -> &mut Self {
         // iterate over all of the sets of lines, from largest to smallest
-        let verbose = self.verbose().clone();
-        let root = self.root().clone();
-        let tree = self.tree().clone();
-        // let level = self.level().clone();
+        let (end, params) = self.get_borrows();
+        if end {
+            return self;
+        }
+        let (verbose, root, tree, _) = params;
+        if verbose {
+            printv!(root, tree);
+        }
 
         'outer: loop {
             let file = self.file().clone();
@@ -289,6 +293,7 @@ impl Refactor {
                                     file.replace_line(line.to_string(), new_line.clone(), verbose);
                                 }
                                 file.remove_dupl();
+                                self.halt();
                                 continue 'outer;
                             }
                         }
@@ -364,7 +369,7 @@ impl Refactor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::process::test;
+    use crate::{process::test, show_result};
     #[test]
     fn test_merge() {
         for level in 1..=3 {
@@ -372,7 +377,7 @@ mod tests {
                 test::show_title(&path, level);
                 let refactor = &mut Refactor::new(&path, level, true);
                 let result = refactor.basic_process().merge();
-                test::show_result(&result.file());
+                show_result!(&result.file());
                 assert!(test::file_cmp(
                     result.file(),
                     test::get_expected_path(&path, level)
