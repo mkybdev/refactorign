@@ -40,6 +40,9 @@ pub fn parse(l: &str) -> Option<Kind> {
     if stripped.is_empty() {
         return Some(Kind::Normal);
     }
+    if stripped.contains("..") {
+        return None;
+    }
     match pattern_parser::pattern(stripped) {
         Ok(k) => Some(k),
         Err(e) => {
@@ -93,6 +96,7 @@ mod tests {
             "!a/b/c/*",
             "a/*",
             "!*.py[cod]",
+            "..",
         ];
         for p in ng_pat.iter() {
             assert!(parse(p).is_none(), "Failed: {:?}", p);
