@@ -1,5 +1,7 @@
 use crate::core::{file::File, tree::DirectoryTree};
 use std::cell::{Ref, RefCell};
+use std::fs;
+use std::io::Write;
 use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone)]
@@ -11,6 +13,7 @@ pub struct State {
     pub level: u8,
     pub tree: DirectoryTree,
     pub end: bool,
+    pub report: Vec<String>,
 }
 
 struct StateFileValue<'a> {
@@ -35,6 +38,7 @@ impl State {
             level,
             tree: DirectoryTree::new(),
             end: false,
+            report: Vec::new(),
         }
     }
 }
@@ -85,6 +89,9 @@ impl Refactor {
     pub fn end(&self) -> bool {
         self.state.end
     }
+    pub fn write_report(&mut self, lines: Vec<String>) {
+        self.state.report.extend(lines.into_iter());
+    }
     pub fn get_borrows(&self) -> (bool, (bool, PathBuf, DirectoryTree, File)) {
         let end = self.end().clone();
         let verbose = self.verbose().clone();
@@ -100,6 +107,7 @@ impl Refactor {
         self.tree().node_line_map.get(path).is_some()
     }
     pub fn is_globally_ignored(&self, path: &Path) -> bool {
+        // println!("path: {:?}", path);
         let file_name = path.file_name().unwrap().to_str().unwrap();
         self.tree()
             .globals
@@ -124,5 +132,61 @@ impl Refactor {
     }
     pub fn run_verbose(path: &Path, level: u8) -> Refactor {
         Self::run_inner(path, level, true)
+    }
+    pub fn save(&self, path: PathBuf) {
+        let f = fs::File::create(path.clone()).expect(&format!(
+            "Failed to save result to: {}",
+            path.clone().display()
+        ));
+        let mut file = std::io::BufWriter::new(f);
+        for line in self.file().content.iter() {
+            if let Err(_) = writeln!(file, "{}", line.content.unwrap()) {
+                fs::remove_file(path.clone()).expect(&format!(
+                    "Failed to remove file: {}",
+                    path.clone().display()
+                ));
+                eprintln!("Error occurred when writing to file: {}", path.display());
+                std::process::exit(1);
+            }
+        }
+    }
+    pub fn save_orig(&self, path: &Path) {
+        let f =
+            fs::File::create(path).expect(&format!("Failed to save result to: {}", path.display()));
+        let mut file = std::io::BufWriter::new(f);
+        for line in self.orig_file().content.iter() {
+            if let Err(_) = writeln!(file, "{}", line.content.unwrap()) {
+                fs::remove_file(path).expect(&format!("Failed to remove file: {}", path.display()));
+                eprintln!("Error occurred when writing to file: {}", path.display());
+                std::process::exit(1);
+            }
+        }
+    }
+    pub fn save_report(&self, path: &Path, result_path: PathBuf) {
+        let f =
+            fs::File::create(path).expect(&format!("Failed to save result to: {}", path.display()));
+        let mut file = std::io::BufWriter::new(f);
+        let report_content = [
+            "Refactorign Report".to_string(),
+            "==================".to_string(),
+            format!("Refactoring level: {}", self.level()),
+            format!("Original file: {}", self.orig_file().path.display()),
+            format!("Refactored file: {}", result_path.display()),
+            "==================".to_string(),
+            format!("Lines (Original file): {}", self.orig_file().content.len()),
+            format!("Lines (Refactored file): {}", self.file().content.len()),
+            format!(
+                "Reduced lines: {}",
+                self.orig_file().content.len() - self.file().content.len()
+            ),
+            "==================".to_string(),
+        ];
+        for line in report_content.iter().chain(self.state.report.iter()) {
+            if let Err(_) = writeln!(file, "{}", line) {
+                fs::remove_file(path).expect(&format!("Failed to remove file: {}", path.display()));
+                eprintln!("Error occurred when writing to file: {}", path.display());
+                std::process::exit(1);
+            }
+        }
     }
 }
