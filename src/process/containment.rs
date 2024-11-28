@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 
+#[allow(unused_imports)]
 use crate::printv;
 
 use super::refactor::Refactor;
@@ -8,12 +9,15 @@ impl Refactor {
     pub fn containment(&mut self) -> &mut Self {
         let (end, params) = self.get_borrows();
         if end {
+            self.write_report(vec![format!("Lines reduced by containment process: 0")]);
             return self;
         }
-        let (verbose, root, tree, _) = params;
-        if verbose {
-            printv!(root, tree);
-        }
+        let (verbose, _, tree, file) = params;
+        // if verbose {
+        //     printv!(root, tree);
+        // }
+
+        let line_num = file.content.len();
         // directory-structural containment
         for parent in tree.root.paths().skip(1) {
             let children = tree.root.get(&parent).unwrap().children().unwrap();
@@ -28,7 +32,9 @@ impl Refactor {
             if self.is_normally_ignored(&parent) {
                 let map = tree.node_line_map.clone();
                 for child in children.keys() {
-                    if let Some(line) = map.get(&parent.join(child.clone())) {
+                    if let Some(line) =
+                        map.get(&parent.join(child.clone().strip_prefix("/").unwrap_or(child)))
+                    {
                         let file = self.file_mut();
                         file.remove_line_with_path(PathBuf::from(line.content.unwrap()), verbose);
                     }
@@ -37,6 +43,10 @@ impl Refactor {
         }
         // update state
         self.update();
+        self.write_report(vec![format!(
+            "Lines reduced by containment process: {}",
+            line_num - self.file().content.len()
+        )]);
         self
     }
 }
