@@ -25,7 +25,14 @@ pub fn get_expected_path(path: &PathBuf, level: u8) -> PathBuf {
             .replace("input", "expected"),
     )
     .join(level.to_string())
-    .join(path.iter().nth(4).unwrap())
+    .join(
+        path.iter()
+            .nth(4)
+            .unwrap()
+            .to_str()
+            .unwrap()
+            .trim_start_matches("/"),
+    )
 }
 
 #[allow(dead_code)]
