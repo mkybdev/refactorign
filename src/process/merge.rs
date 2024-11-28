@@ -173,6 +173,7 @@ fn replace_ranges_with_wildcard(orig: &str, ranges: Vec<&(usize, String)>) -> St
         .to_string()
 }
 
+#[allow(dead_code)]
 fn binomial_coefficient(n: usize, k: usize) -> Option<usize> {
     if k > n {
         return Some(0);
@@ -223,20 +224,23 @@ impl Refactor {
                             .keys()
                             .any(|pat| does_match(pat, &line_str.to_str().unwrap().to_string()))
                     });
-                let sets_size = binomial_coefficient(filtered_lines.clone().count(), size);
-                match sets_size {
-                    Some(s) => {
-                        if s > 100000 {
-                            continue;
-                        }
-                    }
-                    None => continue,
-                }
+                // let sets_size = binomial_coefficient(filtered_lines.clone().count(), size);
+                // match sets_size {
+                //     Some(s) => {
+                //         if s > 100000 {
+                //             continue;
+                //         }
+                //     }
+                //     None => continue,
+                // }
                 let sets = if filtered_lines.clone().count() >= size {
                     filtered_lines.combinations(size)
                 } else {
                     continue;
                 };
+                if sets.clone().nth(10000).is_some() {
+                    continue;
+                }
                 for set in sets {
                     // check if all of the lines in the set are siblings (skip if not)
                     let tmp = set[0].clone();
@@ -413,16 +417,20 @@ impl Refactor {
                                 if ranges.len() < size_ranges {
                                     continue;
                                 }
-                                let sets_size = binomial_coefficient(ranges.len(), size_ranges);
-                                match sets_size {
-                                    Some(s) => {
-                                        if s > 100000 {
-                                            continue;
-                                        }
-                                    }
-                                    None => continue,
+                                // let sets_size = binomial_coefficient(ranges.len(), size_ranges);
+                                // match sets_size {
+                                //     Some(s) => {
+                                //         if s > 100000 {
+                                //             continue;
+                                //         }
+                                //     }
+                                //     None => continue,
+                                // }
+                                let sets_ranges = ranges.iter().combinations(size_ranges);
+                                if sets_ranges.clone().nth(10000).is_some() {
+                                    continue;
                                 }
-                                for set_ranges in ranges.iter().combinations(size_ranges) {
+                                for set_ranges in sets_ranges {
                                     let new_line = replace_ranges_with_wildcard(&orig, set_ranges);
                                     if not_ignored_children
                                         .iter()
