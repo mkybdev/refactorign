@@ -70,10 +70,42 @@ impl File {
             .content
             .iter()
             .position(|l| match &l.content {
-                Content::Pattern(p) => p.strip_prefix("/").unwrap_or(p) == path.to_str().unwrap(),
+                Content::Pattern(p) => {
+                    // println!("{:?}, {:?}", path, p);
+                    let tmp = if path.to_str().unwrap().starts_with("/")
+                        && path
+                            .to_str()
+                            .unwrap()
+                            .strip_suffix("/")
+                            .unwrap_or(path.to_str().unwrap())[1..]
+                            .contains("/")
+                    {
+                        path.strip_prefix("/").unwrap().to_path_buf()
+                    } else {
+                        path.to_path_buf()
+                    };
+                    let path_trimmed = {
+                        let tmp_str = tmp.to_str().unwrap();
+                        if tmp_str.ends_with("/") && tmp_str != "/" {
+                            PathBuf::from(tmp_str.strip_suffix("/").unwrap())
+                        } else {
+                            tmp
+                        }
+                    };
+                    let tmp = if p.starts_with("/")
+                        && p.strip_suffix("/").unwrap_or(p)[1..].contains("/")
+                    {
+                        p.strip_prefix("/").unwrap()
+                    } else {
+                        p
+                    };
+                    let p_trimmed = tmp.strip_suffix("/").unwrap_or(tmp);
+                    // println!("{:?} == {:?}", path_trimmed, p_trimmed);
+                    path_trimmed.to_str().unwrap() == p_trimmed
+                }
                 _ => false,
             })
-            .unwrap();
+            .expect(&format!("{:?}: Path not found: {:?}", self.path, path));
         self.content.remove(i);
         self.content.iter_mut().for_each(|l| {
             if l.line_number > i {

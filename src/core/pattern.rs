@@ -100,7 +100,36 @@ pub fn expand_range(pat: String) -> Vec<String> {
     res.into_iter().collect()
 }
 
-pub fn does_match(path: &PathBuf, pat: &String) -> bool {
+pub fn does_match(path_raw: &PathBuf, pat_raw: &String) -> bool {
+    let tmp = if path_raw.to_str().unwrap().starts_with("/")
+        && path_raw
+            .to_str()
+            .unwrap()
+            .strip_suffix("/")
+            .unwrap_or(path_raw.to_str().unwrap())[1..]
+            .contains("/")
+    {
+        path_raw.strip_prefix("/").unwrap().to_path_buf()
+    } else {
+        path_raw.to_path_buf()
+    };
+    let path = {
+        let tmp_str = tmp.to_str().unwrap();
+        if tmp_str.ends_with("/") && tmp_str != "/" {
+            PathBuf::from(tmp_str.strip_suffix("/").unwrap())
+        } else {
+            tmp
+        }
+    };
+    let tmp = if pat_raw.starts_with("/")
+        && pat_raw.strip_suffix("/").unwrap_or(pat_raw)[1..].contains("/")
+    {
+        pat_raw.strip_prefix("/").unwrap()
+    } else {
+        pat_raw
+    };
+    let pat = tmp.strip_suffix("/").unwrap_or(tmp);
+    // println!("path: {:?}, pat: {}", path, pat);
     let mut path_it = path.to_str().unwrap().chars();
     let mut pat_it = pat.chars();
     'outer: loop {
@@ -180,6 +209,10 @@ mod tests {
             ("a/[1-3a-d].txt", "a/e.txt", false),
             ("a/*.py[cod]", "a/test.pyd", true),
             ("a/*.py[cod]", "a/test.pyw", false),
+            ("*", "a", true),
+            ("/a/b", "a/b/", true),
+            ("a/b/", "a/b", true),
+            ("/.gradle/", "/.gradle/", true),
         ];
         for (pat, path, expected) in cases {
             assert_eq!(does_match(&PathBuf::from(path), &pat.to_string()), expected);
