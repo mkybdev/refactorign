@@ -1,5 +1,6 @@
 use std::{iter, ops::Range, path::PathBuf};
 
+#[allow(unused_imports)]
 use crate::{file::Content, pattern::does_match, printv};
 
 use super::refactor::Refactor;
@@ -40,6 +41,12 @@ fn line_diff_string(
         }
     }
 
+    if longest_subsequence.len() == 0
+        || !(longest_subsequence.starts_with(&['.']) || longest_subsequence.ends_with(&['.']))
+    {
+        return None;
+    }
+
     let result_indices = set
         .clone()
         .map(|chars| {
@@ -50,13 +57,25 @@ fn line_diff_string(
                 .map(|start| (start..(start + &longest_subsequence.len())))
                 .unwrap()
         })
+        // .enumerate()
+        // .filter(|(i, start)| {
+        //     let chars = set.clone().nth(*i).unwrap();
+        //     start.start == 0
+        //         || (start.start + longest_subsequence.len() < chars.clone().count()
+        //             && chars
+        //                 .clone()
+        //                 .nth(start.start + longest_subsequence.len())
+        //                 .unwrap()
+        //                 == '.')
+        // })
+        // .map(|(_, range)| range)
         .collect::<Vec<Range<usize>>>();
 
     if !set.clone().all(|line| line.clone().contains(&'.')) {
         return None;
     }
 
-    if longest_subsequence.len() == 0 {
+    if result_indices.len() == 0 {
         None
     } else {
         let mut prefix_ranges = vec![];
@@ -87,19 +106,24 @@ fn line_diff_char(set: Vec<String>) -> Option<Vec<usize>> {
     if !set.iter().map(|line| line.len()).all_equal() || set.len() < 2 {
         return None;
     }
+    let mut flag = false;
     let mut diff: Vec<usize> = Vec::new();
     let mut index = 0;
     loop {
-        let chars = set.iter().map(|line| line.chars().nth(index));
+        let chars = set.iter().map(|line| line.chars().nth(index).unwrap());
         if !chars.clone().all_equal() {
             diff.push(index);
+        } else {
+            if chars.clone().next().unwrap() != '/' {
+                flag = true;
+            }
         }
         index += 1;
         if index == set[0].len() {
             break;
         }
     }
-    if diff.len() == 0 {
+    if diff.len() == 0 || !flag {
         return None;
     }
     Some(diff)
@@ -149,25 +173,46 @@ fn replace_ranges_with_wildcard(orig: &str, ranges: Vec<&(usize, String)>) -> St
         .to_string()
 }
 
+fn binomial_coefficient(n: usize, k: usize) -> Option<usize> {
+    if k > n {
+        return Some(0);
+    }
+
+    let mut result: usize = 1;
+    let k = k.min(n - k);
+
+    for i in 0..k {
+        result = match result.checked_mul(n - i).and_then(|r| r.checked_div(i + 1)) {
+            Some(val) => val,
+            None => return None,
+        };
+    }
+
+    Some(result)
+}
+
 impl Refactor {
     pub fn merge(&mut self) -> &mut Self {
         // iterate over all of the sets of lines, from largest to smallest
         let (end, params) = self.get_borrows();
         if end {
+            self.write_report(vec![format!("Lines reduced by merge process: 0")]);
             return self;
         }
-        let (verbose, root, tree, _) = params;
-        if verbose {
-            printv!(root, tree);
-        }
+        let (verbose, root, tree, file) = params;
+        // if verbose {
+        //     printv!(root, tree);
+        // }
 
+        let line_num = file.content.len();
         'outer: loop {
             let file = self.file().clone();
             // if verbose {
             //     printv!(file.content);
             // }
             for size in (2..=file.content.len()).rev() {
-                for set in file
+                // println!("size: {}", size);
+                let filtered_lines = file
                     .content
                     .iter()
                     .filter(|line| matches!(line.content, Content::Pattern(_)))
@@ -177,9 +222,22 @@ impl Refactor {
                         tree.node_line_map
                             .keys()
                             .any(|pat| does_match(pat, &line_str.to_str().unwrap().to_string()))
-                    })
-                    .combinations(size)
-                {
+                    });
+                let sets_size = binomial_coefficient(filtered_lines.clone().count(), size);
+                match sets_size {
+                    Some(s) => {
+                        if s > 100000 {
+                            continue;
+                        }
+                    }
+                    None => continue,
+                }
+                let sets = if filtered_lines.clone().count() >= size {
+                    filtered_lines.combinations(size)
+                } else {
+                    continue;
+                };
+                for set in sets {
                     // check if all of the lines in the set are siblings (skip if not)
                     let tmp = set[0].clone();
                     let parent = tmp.parent().unwrap();
@@ -191,12 +249,17 @@ impl Refactor {
                         continue;
                     }
 
-                    let parent_tree = FsTree::read_at(&root.join(parent)).unwrap();
+                    let parent_tree =
+                        FsTree::read_at(root.join(parent.strip_prefix("/").unwrap_or(parent)))
+                            .expect(&format!(
+                                "Failed to read tree at: {:?}",
+                                root.join(parent.strip_prefix("/").unwrap_or(parent))
+                            ));
                     let not_ignored_children = parent_tree
                         .children()
                         .unwrap()
                         .keys()
-                        .map(|path| parent.join(path))
+                        .map(|path| parent.join(path.strip_prefix("/").unwrap_or(path)))
                         .filter(|path| !self.is_ignored(path))
                         .collect::<Vec<_>>();
                     let mut set_str = set
@@ -308,7 +371,7 @@ impl Refactor {
                         if let Some(diff_indices) = diff_indices {
                             if verbose {
                                 println!("Merging with range:\r\n");
-                                // printv!(diff_indices);
+                                printv!(diff_indices);
                             }
                             let mut offset = 0;
                             let mut ranges = Vec::new();
@@ -347,6 +410,18 @@ impl Refactor {
                             // check if any of the range notations can be replaced with a wildcard
                             let orig = set_str[0].clone();
                             'wildcard: for size_ranges in (1..=ranges.len()).rev() {
+                                if ranges.len() < size_ranges {
+                                    continue;
+                                }
+                                let sets_size = binomial_coefficient(ranges.len(), size_ranges);
+                                match sets_size {
+                                    Some(s) => {
+                                        if s > 100000 {
+                                            continue;
+                                        }
+                                    }
+                                    None => continue,
+                                }
                                 for set_ranges in ranges.iter().combinations(size_ranges) {
                                     let new_line = replace_ranges_with_wildcard(&orig, set_ranges);
                                     if not_ignored_children
@@ -366,6 +441,12 @@ impl Refactor {
             }
             break;
         }
+        // update state
+        // self.update();
+        self.write_report(vec![format!(
+            "Lines reduced by merge process: {}",
+            line_num - self.file().content.len()
+        )]);
         self
     }
 }
@@ -431,10 +512,7 @@ mod tests {
                 "python".to_string(),
                 "javascript".to_string()
             ]),
-            Some((
-                vec![Some(0..3), Some(0..2), Some(0..9)],
-                vec![None, Some(3..6), None]
-            ))
+            None
         );
     }
 
