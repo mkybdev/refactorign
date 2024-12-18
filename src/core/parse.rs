@@ -40,9 +40,9 @@ pub fn parse(l: &str) -> Option<Kind> {
     if stripped.is_empty() {
         return Some(Kind::Normal);
     }
-    if stripped.contains("..") {
-        return None;
-    }
+    // if stripped.contains("..") {
+    //     return None;
+    // }
     match pattern_parser::pattern(stripped) {
         Ok(k) => Some(k),
         Err(e) => {
@@ -80,6 +80,8 @@ mod tests {
             ("!a[1-3]/b", Kind::Negation(Box::new(Kind::Normal))),
             ("!a[1-3A-C]/b/c", Kind::Negation(Box::new(Kind::Normal))),
             ("", Kind::Normal),
+            ("..", Kind::Global),
+            ("a/../b", Kind::Normal),
         ];
         for (p, k) in ok_pat.into_iter() {
             assert_eq!(parse(p), Some(k), "Failed: {:?}", p);
@@ -96,7 +98,6 @@ mod tests {
             "!a/b/c/*",
             "a/*",
             "!*.py[cod]",
-            "..",
         ];
         for p in ng_pat.iter() {
             assert!(parse(p).is_none(), "Failed: {:?}", p);
