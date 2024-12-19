@@ -1,6 +1,6 @@
 # testing all features
 
-*.txt
+*.txt/
 !a.txt
 !/b.txt
 a[1-3]
