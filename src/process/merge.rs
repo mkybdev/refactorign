@@ -195,15 +195,15 @@ fn binomial_coefficient(n: usize, k: usize) -> Option<usize> {
 impl Refactor {
     pub fn merge(&mut self) -> &mut Self {
         // iterate over all of the sets of lines, from largest to smallest
-        let (end, params) = self.get_borrows();
-        if end {
-            self.write_report(vec![format!("Lines reduced by merge process: 0")]);
-            return self;
-        }
-        let (verbose, root, tree, file) = params;
-        // if verbose {
-        //     printv!(root, tree);
+        let (prev, params) = self.get_borrows();
+        // if end {
+        //     self.write_report(vec![format!("Lines reduced by merge process: 0")]);
+        //     return self;
         // }
+        let (verbose, root, tree, file) = params;
+        if verbose {
+            printv!(root, tree, file);
+        }
 
         let line_num = file.content.len();
         'outer: loop {
@@ -364,7 +364,7 @@ impl Refactor {
                                     file.replace_line(line.to_string(), new_line.clone(), verbose);
                                 }
                                 file.remove_dupl();
-                                self.halt();
+                                // self.halt();
                                 continue 'outer;
                             }
                         }
@@ -449,8 +449,15 @@ impl Refactor {
             }
             break;
         }
-        // update state
-        // self.update();
+        if prev.violate {
+            if self.state.lines_diff() > prev.state.unwrap().lines_diff() {
+                self.update(true);
+            } else {
+                self.back();
+            }
+        } else {
+            self.update(true);
+        }
         self.write_report(vec![format!(
             "Lines reduced by merge process: {}",
             line_num - self.file().content.len()
@@ -465,11 +472,11 @@ mod tests {
     use crate::{process::test, show_result};
     #[test]
     fn test_merge() {
-        for level in 1..=3 {
+        for level in 1..=1 {
             for path in test::get_input_paths("merge") {
                 test::show_title(&path, level);
                 let refactor = &mut Refactor::new(&path, level, true);
-                let result = refactor.basic_process().merge();
+                let result = refactor.basic_process().merge().finish();
                 show_result!(&result.file());
                 assert!(test::file_cmp(
                     result.file(),

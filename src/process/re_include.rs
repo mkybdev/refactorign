@@ -176,15 +176,15 @@ fn get_ign_children(
 
 impl Refactor {
     pub fn re_include(&mut self) -> &mut Self {
-        let (end, params) = self.get_borrows();
-        if end {
-            self.write_report(vec![format!("Lines reduced by re-include process: 0")]);
-            return self;
-        }
-        let (verbose, root, tree, file) = params;
-        // if verbose {
-        //     printv!(root, tree);
+        let (prev, params) = self.get_borrows();
+        // if end {
+        //     self.write_report(vec![format!("Lines reduced by re-include process: 0")]);
+        //     return self;
         // }
+        let (verbose, root, tree, file) = params;
+        if verbose {
+            printv!(root, tree, file);
+        }
 
         let line_num = file.content.len();
         // iterate over nodes (parent nodes)
@@ -273,7 +273,7 @@ impl Refactor {
                                         file.add_line(new_line, verbose);
                                     }
                                 }
-                                self.halt();
+                                // self.halt();
                             }
                         }
                     }
@@ -284,8 +284,15 @@ impl Refactor {
             eprintln!("Failed to read directory tree. Aborting.");
             std::process::exit(1);
         }
-        // update state
-        // self.update();
+        if prev.violate {
+            if self.state.lines_diff() > prev.state.unwrap().lines_diff() {
+                self.update(true);
+            } else {
+                self.back();
+            }
+        } else {
+            self.update(true);
+        }
         self.write_report(vec![format!(
             "Lines reduced by re-include process: {}",
             line_num - self.file().content.len()
@@ -304,7 +311,7 @@ mod tests {
             for path in test::get_input_paths("re_include") {
                 test::show_title(&path, level);
                 let refactor = &mut Refactor::new(&path, level, true);
-                let result = refactor.basic_process().re_include();
+                let result = refactor.basic_process().re_include().finish();
                 show_result!(&result.file());
                 assert!(test::file_cmp(
                     result.file(),

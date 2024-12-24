@@ -5,6 +5,12 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone)]
+pub struct Prev {
+    pub state: Box<Option<State>>,
+    pub violate: bool,
+}
+
+#[derive(Debug, Clone)]
 pub struct State {
     verbose: bool,
     orig_file: File,
@@ -12,7 +18,7 @@ pub struct State {
     pub root: PathBuf,
     pub level: u8,
     pub tree: DirectoryTree,
-    pub end: bool,
+    pub prev: Prev,
     pub report: Vec<String>,
 }
 
@@ -37,9 +43,15 @@ impl State {
             root,
             level,
             tree: DirectoryTree::new(),
-            end: false,
+            prev: Prev {
+                state: Box::new(None),
+                violate: false,
+            },
             report: Vec::new(),
         }
+    }
+    pub fn lines_diff(&self) -> usize {
+        self.orig_file.content.len() - self.file.borrow().content.len()
     }
 }
 
@@ -83,25 +95,66 @@ impl Refactor {
     pub fn rebuild_tree(&mut self) {
         self.state.tree = DirectoryTree::build_tree_from_file(&self.file());
     }
-    pub fn halt(&mut self) {
-        self.state.end = true;
-    }
-    pub fn end(&self) -> bool {
-        self.state.end
+    pub fn prev(&self) -> Prev {
+        self.state.prev.clone()
     }
     pub fn write_report(&mut self, lines: Vec<String>) {
         self.state.report.extend(lines.into_iter());
     }
-    pub fn get_borrows(&self) -> (bool, (bool, PathBuf, DirectoryTree, File)) {
-        let end = self.end().clone();
-        let verbose = self.verbose().clone();
-        let root = self.root().clone();
-        let tree = self.tree().clone();
-        let file = self.file().clone();
-        (end, (verbose, root, tree, file))
+    pub fn get_borrows(&self) -> (Prev, (bool, PathBuf, DirectoryTree, File)) {
+        let prev = self.prev().clone();
+        let state = if prev.violate {
+            self.state.prev.state.clone().unwrap()
+        } else {
+            self.state.clone()
+        };
+        (
+            prev,
+            (
+                state.verbose,
+                state.root,
+                state.tree,
+                StateFileValue {
+                    value: self.state.file.borrow(),
+                }
+                .get()
+                .clone(),
+            ),
+        )
     }
-    pub fn update(&mut self) {
-        self.rebuild_tree();
+    pub fn update(&mut self, violate: bool) {
+        if !violate {
+            self.rebuild_tree();
+            self.state.prev = Prev {
+                state: Box::new(Some(self.state.clone())),
+                violate,
+            };
+        } else {
+            if self.state.prev.violate {
+                self.state.prev = Prev {
+                    state: Box::new(Some(self.state.clone())),
+                    violate,
+                };
+            } else {
+                let tmp = self.state.clone();
+                if let Some(prev) = self.state.prev.state.as_ref() {
+                    self.state = prev.clone();
+                }
+                self.state.prev = Prev {
+                    state: Box::new(Some(tmp)),
+                    violate,
+                };
+            }
+        }
+    }
+    pub fn back(&mut self) {
+        self.state = self.state.prev.state.clone().unwrap();
+    }
+    pub fn finish(&mut self) -> &mut Refactor {
+        if self.state.prev.violate {
+            self.back();
+        }
+        self
     }
     pub fn is_normally_ignored(&self, path: &Path) -> bool {
         self.tree().node_line_map.get(path).is_some()
@@ -112,7 +165,7 @@ impl Refactor {
         self.tree()
             .globals
             .keys()
-            .find(|&x| x == file_name || x[1..] == file_name[1..])
+            .find(|&x| x == file_name || (&x[..1] == "*" && x[1..] == file_name[1..]))
             .is_some()
     }
     pub fn is_ignored(&self, path: &Path) -> bool {
@@ -125,6 +178,7 @@ impl Refactor {
             .containment()
             .re_include()
             .merge()
+            .finish()
             .clone()
     }
     pub fn run(path: &Path, level: u8) -> Refactor {

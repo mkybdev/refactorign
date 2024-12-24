@@ -7,15 +7,15 @@ use super::refactor::Refactor;
 
 impl Refactor {
     pub fn containment(&mut self) -> &mut Self {
-        let (end, params) = self.get_borrows();
-        if end {
-            self.write_report(vec![format!("Lines reduced by containment process: 0")]);
-            return self;
-        }
-        let (verbose, _, tree, file) = params;
-        // if verbose {
-        //     printv!(root, tree);
+        let (prev, params) = self.get_borrows();
+        // if end {
+        //     self.write_report(vec![format!("Lines reduced by containment process: 0")]);
+        //     return self;
         // }
+        let (verbose, root, tree, file) = params;
+        if verbose {
+            printv!(root, tree, file);
+        }
 
         let line_num = file.content.len();
         // directory-structural containment
@@ -41,8 +41,15 @@ impl Refactor {
                 }
             }
         }
-        // update state
-        self.update();
+        if prev.violate {
+            if self.state.lines_diff() > prev.state.unwrap().lines_diff() {
+                self.update(false);
+            } else {
+                self.back();
+            }
+        } else {
+            self.update(false);
+        }
         self.write_report(vec![format!(
             "Lines reduced by containment process: {}",
             line_num - self.file().content.len()
@@ -61,7 +68,7 @@ mod tests {
             for path in test::get_input_paths("containment") {
                 test::show_title(&path, level);
                 let refactor = &mut Refactor::new(&path, level, true);
-                let result = refactor.basic_process().containment();
+                let result = refactor.basic_process().containment().finish();
                 show_result!(&result.file());
                 assert!(test::file_cmp(
                     result.file(),
