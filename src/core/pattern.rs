@@ -173,6 +173,16 @@ pub fn does_match(path_raw: &PathBuf, pat_raw: &String) -> bool {
     }
 }
 
+pub trait ToString {
+    fn to_string(&self) -> String;
+}
+
+impl ToString for PathBuf {
+    fn to_string(&self) -> String {
+        self.to_str().unwrap().to_string()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

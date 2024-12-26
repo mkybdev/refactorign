@@ -1,7 +1,7 @@
 use std::{iter, ops::Range, path::PathBuf};
 
 #[allow(unused_imports)]
-use crate::{file::Content, pattern::does_match, printv};
+use crate::{file::Content, pattern::{does_match, ToString}, printv};
 
 use super::refactor::Refactor;
 use fs_tree::FsTree;
@@ -196,10 +196,6 @@ impl Refactor {
     pub fn merge(&mut self) -> &mut Self {
         // iterate over all of the sets of lines, from largest to smallest
         let (prev, params) = self.get_borrows();
-        // if end {
-        //     self.write_report(vec![format!("Lines reduced by merge process: 0")]);
-        //     return self;
-        // }
         let (verbose, root, tree, file) = params;
         if verbose {
             printv!(root, tree, file);
@@ -268,7 +264,7 @@ impl Refactor {
                         .collect::<Vec<_>>();
                     let mut set_str = set
                         .iter()
-                        .map(|x| x.to_str().unwrap().to_string())
+                        .map(|x| x.to_string())
                         .collect::<Vec<String>>();
 
                     let can_range;

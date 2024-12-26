@@ -8,7 +8,7 @@ use fs_tree::FsTree;
 
 use super::refactor::Refactor;
 
-use crate::pattern::does_match;
+use crate::pattern::{does_match, ToString};
 #[allow(unused_imports)]
 use crate::{
     pattern::{expand_range, Kind},
@@ -146,7 +146,7 @@ fn get_ign_children(
         .collect::<BTreeSet<PathBuf>>();
     let ign_children = ign_children_lines
         .iter()
-        .flat_map(|path| expand_range(path.to_str().unwrap().to_string()))
+        .flat_map(|path| expand_range(path.to_string()))
         .map(|s| PathBuf::from(s))
         .filter_map(|path| {
             let path_file = path.file_name().unwrap().to_str().unwrap();
@@ -177,10 +177,6 @@ fn get_ign_children(
 impl Refactor {
     pub fn re_include(&mut self) -> &mut Self {
         let (prev, params) = self.get_borrows();
-        // if end {
-        //     self.write_report(vec![format!("Lines reduced by re-include process: 0")]);
-        //     return self;
-        // }
         let (verbose, root, tree, file) = params;
         if verbose {
             printv!(root, tree, file);
@@ -213,8 +209,6 @@ impl Refactor {
                                             child,
                                             &parent_path
                                                 .join(path.strip_prefix("/").unwrap_or(path))
-                                                .to_str()
-                                                .unwrap()
                                                 .to_string(),
                                         )
                                     })
@@ -262,7 +256,7 @@ impl Refactor {
                                     if parent_path.as_os_str() == "" {
                                         String::from("/*")
                                     } else {
-                                        parent_path.join("*").to_str().unwrap().to_string()
+                                        parent_path.join("*").to_string()
                                     },
                                     verbose,
                                 );
