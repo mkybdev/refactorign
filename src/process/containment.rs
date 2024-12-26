@@ -8,8 +8,7 @@ use super::refactor::Refactor;
 
 impl Refactor {
     pub fn containment(&mut self) -> &mut Self {
-        let (prev, params) = self.get_borrows();
-        let (verbose, root, tree, file) = params;
+        let (verbose, root, tree, file) = self.get_borrows();
         if verbose {
             printv!(root, tree, file);
         }
@@ -56,19 +55,7 @@ impl Refactor {
                 }
             }
         }
-        if prev.violate {
-            if self.state.lines_diff() > prev.state.unwrap().lines_diff() {
-                self.update(false);
-            } else {
-                self.back();
-            }
-        } else {
-            self.update(false);
-        }
-        self.write_report(vec![format!(
-            "Lines reduced by containment process: {}",
-            line_num - self.file().content.len()
-        )]);
+        self.finish(false, "containment", line_num);
         self
     }
 }

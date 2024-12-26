@@ -176,8 +176,7 @@ fn get_ign_children(
 
 impl Refactor {
     pub fn re_include(&mut self) -> &mut Self {
-        let (prev, params) = self.get_borrows();
-        let (verbose, root, tree, file) = params;
+        let (verbose, root, tree, file) = self.get_borrows();
         if verbose {
             printv!(root, tree, file);
         }
@@ -278,19 +277,7 @@ impl Refactor {
             eprintln!("Failed to read directory tree. Aborting.");
             std::process::exit(1);
         }
-        if prev.violate {
-            if self.state.lines_diff() > prev.state.unwrap().lines_diff() {
-                self.update(true);
-            } else {
-                self.back();
-            }
-        } else {
-            self.update(true);
-        }
-        self.write_report(vec![format!(
-            "Lines reduced by re-include process: {}",
-            line_num - self.file().content.len()
-        )]);
+        self.finish(true, "re_include", line_num);
         self
     }
 }

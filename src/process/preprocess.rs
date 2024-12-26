@@ -5,25 +5,13 @@ impl Refactor {
     pub fn preprocess(&mut self) -> &mut Self {
         let tree = DirectoryTree::build_tree_from_file(&(self.file()));
         self.state.tree = tree;
-        let (prev, (verbose, root, tree, file)) = self.get_borrows();
+        let (verbose, root, tree, file) = self.get_borrows();
         if verbose {
             printv!(root, tree, file);
         }
         let line_num = self.file().content.len();
         self.file_mut().remove_dupl();
-        if prev.violate {
-            if self.state.lines_diff() > prev.state.unwrap().lines_diff() {
-                self.update(false);
-            } else {
-                self.back();
-            }
-        } else {
-            self.update(false);
-        }
-        self.write_report(vec![format!(
-            "Lines reduced by preprocess (removing duplication): {}",
-            line_num - self.file().content.len()
-        )]);
+        self.finish(false, "preprocess", line_num);
         self
     }
 }

@@ -5,12 +5,6 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone)]
-pub struct Prev {
-    pub state: Box<Option<State>>,
-    pub violate: bool,
-}
-
-#[derive(Debug, Clone)]
 pub struct State {
     verbose: bool,
     orig_file: File,
@@ -18,8 +12,8 @@ pub struct State {
     pub root: PathBuf,
     pub level: u8,
     pub tree: DirectoryTree,
-    pub prev: Prev,
-    pub report: Vec<String>,
+    pub prev: Option<Box<State>>,
+    report: Vec<String>,
 }
 
 struct StateFileValue<'a> {
@@ -43,10 +37,7 @@ impl State {
             root,
             level,
             tree: DirectoryTree::new(),
-            prev: Prev {
-                state: Box::new(None),
-                violate: false,
-            },
+            prev: None,
             report: Vec::new(),
         }
     }
@@ -58,11 +49,13 @@ impl State {
 #[derive(Debug, Clone)]
 pub struct Refactor {
     pub state: State,
+    pub pended: Option<State>,
 }
 impl Refactor {
     pub fn new(path: &Path, level: u8, verbose: bool) -> Self {
         Refactor {
             state: State::new(path, level, verbose),
+            pended: None,
         }
     }
     pub fn verbose(&self) -> bool {
@@ -95,60 +88,60 @@ impl Refactor {
     pub fn rebuild_tree(&mut self) {
         self.state.tree = DirectoryTree::build_tree_from_file(&self.file());
     }
-    pub fn prev(&self) -> Prev {
-        self.state.prev.clone()
+    pub fn pended(&self) -> Option<State> {
+        self.pended.clone()
     }
     pub fn write_report(&mut self, lines: Vec<String>) {
         self.state.report.extend(lines.into_iter());
     }
-    pub fn get_borrows(&self) -> (Prev, (bool, PathBuf, DirectoryTree, File)) {
-        let prev = self.prev().clone();
-        let state = if prev.violate {
-            self.state.prev.state.clone().unwrap()
-        } else {
-            self.state.clone()
-        };
+    pub fn get_borrows(&self) -> (bool, PathBuf, DirectoryTree, File) {
+        let state = self.state.clone();
         (
-            prev,
-            (
-                state.verbose,
-                state.root,
-                state.tree,
-                StateFileValue {
-                    value: self.state.file.borrow(),
-                }
-                .get()
-                .clone(),
-            ),
+            state.verbose,
+            state.root,
+            state.tree,
+            StateFileValue {
+                value: self.state.file.borrow(),
+            }
+            .get()
+            .clone(),
         )
     }
-    pub fn update(&mut self, violate: bool) {
+    fn update(&mut self, violate: bool) {
+        println!("UPDATE\r\n");
         if !violate {
-            self.rebuild_tree();
-            self.state.prev = Prev {
-                state: Box::new(Some(self.state.clone())),
-                violate,
-            };
+            self.pended = None;
         } else {
-            if self.state.prev.violate {
-                self.state.prev = Prev {
-                    state: Box::new(Some(self.state.clone())),
-                    violate,
-                };
-            } else {
-                let tmp = self.state.clone();
-                if let Some(prev) = self.state.prev.state.as_ref() {
-                    self.state = prev.clone();
-                }
-                self.state.prev = Prev {
-                    state: Box::new(Some(tmp)),
-                    violate,
-                };
+            self.pended = Some(self.state.clone());
+            if let Some(prev) = self.state.prev.clone() {
+                self.state = *prev;
             }
         }
     }
-    pub fn back(&mut self) {
-        self.state = self.state.prev.state.clone().unwrap();
+    fn back(&mut self) {
+        println!("BACKTRACK\r\n");
+        self.state = self.pended().unwrap();
+        self.pended = None;
+    }
+    pub fn finish(&mut self, violate: bool, process: &str, line_num: usize) {
+        if let Some(pended) = self.pended() {
+            if self.state.lines_diff() > pended.lines_diff() {
+                self.update(violate);
+            } else {
+                self.write_report(vec![format!("(Skipped {} process)", process)]);
+                self.back();
+            }
+        } else {
+            self.write_report(vec![format!(
+                "Lines reduced by {} process: {}",
+                process,
+                line_num - self.file().content.len()
+            )]);
+            self.update(violate);
+        }
+        if !violate {
+            self.state.prev = Some(Box::new(self.state.clone()));
+        }
     }
     pub fn is_normally_ignored(&self, path: &Path) -> bool {
         self.tree().node_line_map.get(path).is_some()

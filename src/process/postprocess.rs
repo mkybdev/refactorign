@@ -3,19 +3,17 @@ use crate::{printv, tree::DirectoryTree, Refactor};
 
 impl Refactor {
     pub fn postprocess(&mut self) -> &mut Self {
-        let (prev, (verbose, root, tree, file)) = self.get_borrows();
+        let (verbose, root, tree, file) = self.get_borrows();
         if verbose {
             printv!(root, tree, file);
         }
         let line_num = self.file().content.len();
         self.file_mut().remove_dupl();
-        if prev.violate {
-            self.back();
+        self.finish(false, "postprocess", line_num);
+        printv!(self.state, self.pended());
+        if let Some(pended) = self.pended() {
+            self.state = pended;
         }
-        self.write_report(vec![format!(
-            "Lines reduced by postprocess (removing duplication): {}",
-            line_num - self.file().content.len()
-        )]);
         self
     }
 }

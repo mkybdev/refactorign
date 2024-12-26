@@ -1,7 +1,11 @@
 use std::{iter, ops::Range, path::PathBuf};
 
 #[allow(unused_imports)]
-use crate::{file::Content, pattern::{does_match, ToString}, printv};
+use crate::{
+    file::Content,
+    pattern::{does_match, ToString},
+    printv,
+};
 
 use super::refactor::Refactor;
 use fs_tree::FsTree;
@@ -195,8 +199,7 @@ fn binomial_coefficient(n: usize, k: usize) -> Option<usize> {
 impl Refactor {
     pub fn merge(&mut self) -> &mut Self {
         // iterate over all of the sets of lines, from largest to smallest
-        let (prev, params) = self.get_borrows();
-        let (verbose, root, tree, file) = params;
+        let (verbose, root, tree, file) = self.get_borrows();
         if verbose {
             printv!(root, tree, file);
         }
@@ -262,10 +265,7 @@ impl Refactor {
                         .map(|path| parent.join(path.strip_prefix("/").unwrap_or(path)))
                         .filter(|path| !self.is_ignored(path))
                         .collect::<Vec<_>>();
-                    let mut set_str = set
-                        .iter()
-                        .map(|x| x.to_string())
-                        .collect::<Vec<String>>();
+                    let mut set_str = set.iter().map(|x| x.to_string()).collect::<Vec<String>>();
 
                     let can_range;
                     let diff_indices;
@@ -445,19 +445,7 @@ impl Refactor {
             }
             break;
         }
-        if prev.violate {
-            if self.state.lines_diff() > prev.state.unwrap().lines_diff() {
-                self.update(true);
-            } else {
-                self.back();
-            }
-        } else {
-            self.update(true);
-        }
-        self.write_report(vec![format!(
-            "Lines reduced by merge process: {}",
-            line_num - self.file().content.len()
-        )]);
+        self.finish(true, "merge", line_num);
         self
     }
 }
