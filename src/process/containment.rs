@@ -1,5 +1,6 @@
-use std::path::PathBuf;
+use std::{collections::BTreeMap, path::PathBuf};
 
+use crate::pattern::{does_match, ToString};
 #[allow(unused_imports)]
 use crate::printv;
 
@@ -8,35 +9,49 @@ use super::refactor::Refactor;
 impl Refactor {
     pub fn containment(&mut self) -> &mut Self {
         let (prev, params) = self.get_borrows();
-        // if end {
-        //     self.write_report(vec![format!("Lines reduced by containment process: 0")]);
-        //     return self;
-        // }
         let (verbose, root, tree, file) = params;
         if verbose {
             printv!(root, tree, file);
         }
 
         let line_num = file.content.len();
-        // directory-structural containment
-        for parent in tree.root.paths().skip(1) {
-            let children = tree.root.get(&parent).unwrap().children().unwrap();
+        for node in tree.root.paths().min_depth(1) {
             // global containment (wildcard / global)
-            if self.is_globally_ignored(&parent) {
-                if let Some(line) = tree.node_line_map.get(&parent) {
+            if self.is_globally_ignored(&node) {
+                if let Some(line) = tree.node_line_map.get(&node) {
                     let file = self.file_mut();
                     file.remove_line_with_path(PathBuf::from(line.content.unwrap()), verbose);
                 }
             }
-            // normal containment
-            if self.is_normally_ignored(&parent) {
-                let map = tree.node_line_map.clone();
-                for child in children.keys() {
-                    if let Some(line) =
-                        map.get(&parent.join(child.clone().strip_prefix("/").unwrap_or(child)))
-                    {
+            // normal containment (directory-structure)
+            if self.is_normally_ignored(&node) {
+                // let children = tree.root.get(&parent).unwrap().children().unwrap();
+                let childrens = tree
+                    .root
+                    .paths()
+                    .filter(|path| does_match(path, &node.to_string()))
+                    .map(|path| {
+                        (
+                            path.clone(),
+                            tree.root.get(path).unwrap().children().unwrap().clone(),
+                        )
+                    })
+                    .collect::<Vec<(PathBuf, BTreeMap<_, _>)>>();
+                // let map = tree.node_line_map.clone();
+                // printv!(node, childrens, map);
+                for (parent, children) in childrens {
+                    for child in children.keys() {
+                        // if let Some(line) =
+                        //     map.get(&node.join(child.clone().strip_prefix("/").unwrap_or(child)))
+                        // {
+                        //     let file = self.file_mut();
+                        //     file.remove_line_with_path(
+                        //         PathBuf::from(line.content.unwrap()),
+                        //         verbose,
+                        //     );
+                        // }
                         let file = self.file_mut();
-                        file.remove_line_with_path(PathBuf::from(line.content.unwrap()), verbose);
+                        file.remove_line_with_path(PathBuf::from(parent.join(child)), verbose);
                     }
                 }
             }
