@@ -68,7 +68,7 @@ mod tests {
             for path in test::get_input_paths("containment") {
                 test::show_title(&path, level);
                 let refactor = &mut Refactor::new(&path, level, true);
-                let result = refactor.basic_process().containment().finish();
+                let result = refactor.preprocess().containment().postprocess();
                 show_result!(&result.file());
                 assert!(test::file_cmp(
                     result.file(),

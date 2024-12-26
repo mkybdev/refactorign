@@ -7,7 +7,12 @@ fn test_integration() {
         for path in test::get_input_paths("integration") {
             test::show_title(&path, level);
             let refactor = &mut refactorign::Refactor::new(&path, level, true);
-            let result = refactor.basic_process().containment().re_include().merge().finish();
+            let result = refactor
+                .preprocess()
+                .containment()
+                .re_include()
+                .merge()
+                .postprocess();
             show_result!(&result.file());
             assert!(test::file_cmp(
                 result.file(),

@@ -9,10 +9,11 @@ pub mod core {
 }
 
 pub mod process {
-    pub mod basic_process;
+    pub mod preprocess;
     pub mod containment;
     pub mod merge;
     pub mod re_include;
+    pub mod postprocess;
     pub mod refactor;
     pub mod test;
 }

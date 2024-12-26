@@ -311,7 +311,7 @@ mod tests {
             for path in test::get_input_paths("re_include") {
                 test::show_title(&path, level);
                 let refactor = &mut Refactor::new(&path, level, true);
-                let result = refactor.basic_process().re_include().finish();
+                let result = refactor.preprocess().re_include().postprocess();
                 show_result!(&result.file());
                 assert!(test::file_cmp(
                     result.file(),

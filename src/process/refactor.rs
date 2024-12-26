@@ -150,12 +150,6 @@ impl Refactor {
     pub fn back(&mut self) {
         self.state = self.state.prev.state.clone().unwrap();
     }
-    pub fn finish(&mut self) -> &mut Refactor {
-        if self.state.prev.violate {
-            self.back();
-        }
-        self
-    }
     pub fn is_normally_ignored(&self, path: &Path) -> bool {
         self.tree().node_line_map.get(path).is_some()
     }
@@ -174,11 +168,11 @@ impl Refactor {
     fn run_inner(path: &Path, level: u8, verbose: bool) -> Refactor {
         let refactor = &mut Refactor::new(path, level, verbose);
         refactor
-            .basic_process()
+            .preprocess()
             .containment()
             .re_include()
             .merge()
-            .finish()
+            .postprocess()
             .clone()
     }
     pub fn run(path: &Path, level: u8) -> Refactor {
