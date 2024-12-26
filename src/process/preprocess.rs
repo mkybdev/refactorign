@@ -2,11 +2,11 @@
 use crate::{printv, tree::DirectoryTree, Refactor};
 
 impl Refactor {
-    pub fn basic_process(&mut self) -> &mut Self {
+    pub fn preprocess(&mut self) -> &mut Self {
         let line_num = self.file().content.len();
         self.file_mut().remove_dupl();
         self.write_report(vec![format!(
-            "Lines reduced by basic process (removing duplication): {}",
+            "Lines reduced by preprocess (removing duplication): {}",
             line_num - self.file().content.len()
         )]);
         let tree = DirectoryTree::build_tree_from_file(&(self.file()));
@@ -33,12 +33,12 @@ mod tests {
     use super::*;
     use crate::{process::test, show_result};
     #[test]
-    fn test_basic_process() {
+    fn test_preprocess() {
         for level in 1..=1 {
-            for path in test::get_input_paths("basic_process") {
+            for path in test::get_input_paths("preprocess") {
                 test::show_title(&path, level);
                 let refactor = &mut Refactor::new(&path, level, true);
-                let result = refactor.basic_process().finish();
+                let result = refactor.preprocess().postprocess();
                 show_result!(&result.file());
                 assert!(test::file_cmp(
                     result.file(),
