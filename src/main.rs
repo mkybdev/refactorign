@@ -1,6 +1,7 @@
 extern crate refactorign;
 
 use clap::Parser;
+use refactorign::parse;
 use std::path::Path;
 use std::path::PathBuf;
 
@@ -30,6 +31,16 @@ struct Args {
     )]
     destination: Option<String>,
 
+    /// Refactoring level (1-3)
+    #[arg(
+        short,
+        long,
+        allow_hyphen_values = true,
+        default_value_t = 2,
+        help = "Refactoring level (1 - 3, Higher level means more aggressive refactoring)"
+    )]
+    level: isize,
+
     /// Whether to overwrite the original .gitignore file
     #[arg(
         short,
@@ -48,18 +59,24 @@ struct Args {
     )]
     report: bool,
 
-    /// Refactoring level (1-3)
+    /// If set, the tool will run in verbose mode
     #[arg(
-        short,
         long,
-        allow_hyphen_values = true,
-        default_value_t = 2,
-        help = "Refactoring level (1 - 3, Higher level means more aggressive refactoring)"
+        help = "If set, the tool will run in verbose mode",
+        default_value_t = false
     )]
-    level: isize,
+    verbose: bool,
+
+    /// If set, the tool will just show whether the original .gitignore file is valid
+    #[arg(
+        long,
+        help = "If set, the tool will only show whether the original .gitignore file is valid",
+        default_value_t = false
+    )]
+    validate: bool,
 }
 
-fn validate_args(args: &Args) -> (&Path, PathBuf, bool, u8, bool) {
+fn validate_args(args: &Args) -> (&Path, PathBuf, bool, u8, bool, bool, bool) {
     let path = Path::new(args.path.as_deref().unwrap_or("./.gitignore"));
     if let Some(_) = &args.path {
         if !path.exists() {
@@ -97,35 +114,55 @@ fn validate_args(args: &Args) -> (&Path, PathBuf, bool, u8, bool) {
         args.overwrite,
         args.level as u8,
         args.report,
+        args.validate,
+        args.verbose,
     )
 }
 
 const TEST: bool = true;
-const VERBOSE: bool = false;
 
 fn main() {
     let args = Args::parse();
-    let (path, destination, overwrite, level, report) = validate_args(&args);
-    let result = if VERBOSE {
-        Refactor::run_verbose(path, level)
+    let (path, destination, overwrite, level, report, validate, verbose) = validate_args(&args);
+    if validate {
+        let content = std::fs::read_to_string(path).unwrap();
+        for line in content
+            .lines()
+            .filter(|l| !l.trim().is_empty() && l.chars().next() != Some('#'))
+        {
+            if let Some(_) = parse::parse(line) {
+                continue;
+            } else {
+                println!("Invalid pattern found: {}", line);
+                std::process::exit(1);
+            }
+        }
+        println!("The .gitignore file is valid.");
     } else {
-        Refactor::run(path, level)
-    };
-    let result_path = if overwrite {
-        path.to_path_buf()
-    } else {
-        destination.join("refactored.gitignore")
-    };
-    result.save(result_path.clone());
-    if overwrite {
-        println!("Overwritten: {}", path.display());
-    } else {
-        println!("Saved: {}", destination.display());
-    }
-    if report {
-        result.save_report(destination.join("refactorign_report").as_path(), result_path);
-    }
-    if TEST {
-        result.save_orig(destination.join("original.gitignore").as_path());
+        let result = if verbose {
+            Refactor::run_verbose(path, level)
+        } else {
+            Refactor::run(path, level)
+        };
+        let result_path = if overwrite {
+            path.to_path_buf()
+        } else {
+            destination.join("refactored.gitignore")
+        };
+        result.save(result_path.clone());
+        if overwrite {
+            println!("Overwritten: {}", path.display());
+        } else {
+            println!("Saved: {}", destination.display());
+        }
+        if report {
+            result.save_report(
+                destination.join("refactorign_report").as_path(),
+                result_path,
+            );
+        }
+        if TEST {
+            result.save_orig(destination.join("original.gitignore").as_path());
+        }
     }
 }
