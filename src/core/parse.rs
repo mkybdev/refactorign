@@ -12,7 +12,7 @@ peg::parser! {
 
         pub rule special() -> Kind = wildcard() / global()
 
-        pub rule wildcard() -> Kind = "*" string() "/"? { Kind::Wildcard }
+        pub rule wildcard() -> Kind = "*" string()? "/"? { Kind::Wildcard }
 
         // pub rule global() -> Kind = (wildcard() / string()!"/") "/"? { Kind::Global }
         pub rule global() -> Kind = string()!"/" { Kind::Global }
@@ -83,12 +83,12 @@ mod tests {
             ("..", Kind::Global),
             ("a/../b", Kind::Normal),
             ("*.info/", Kind::Wildcard),
+            ("*/", Kind::Wildcard)
         ];
         for (p, k) in ok_pat.into_iter() {
             assert_eq!(parse(p), Some(k), "Failed: {:?}", p);
         }
         let ng_pat = [
-            "*",
             "**",
             "*a/b",
             "[a-z",
