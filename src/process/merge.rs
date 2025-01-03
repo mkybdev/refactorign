@@ -3,7 +3,7 @@ use std::{iter, ops::Range, path::PathBuf};
 #[allow(unused_imports)]
 use crate::{
     file::Content,
-    pattern::{does_match, ToString},
+    pattern::{does_match, expand_range, ToString},
     printv,
 };
 
@@ -134,6 +134,7 @@ fn line_diff_char(set: Vec<String>) -> Option<Vec<usize>> {
 }
 
 fn to_range(chars: Vec<char>) -> String {
+    let chars = chars.into_iter().sorted().collect::<Vec<_>>();
     let mut range = String::new();
     let mut start = chars[0];
     let mut end = chars[0];
@@ -145,7 +146,9 @@ fn to_range(chars: Vec<char>) -> String {
                 range.push(start);
             } else {
                 range.push(start);
-                range.push('-');
+                if end as u8 - start as u8 > 1 {
+                    range.push('-');
+                }
                 range.push(end);
             }
             start = *c;
@@ -156,7 +159,9 @@ fn to_range(chars: Vec<char>) -> String {
         range.push(start);
     } else {
         range.push(start);
-        range.push('-');
+        if end as u8 - start as u8 > 1 {
+            range.push('-');
+        }
         range.push(end);
     }
     range
@@ -175,6 +180,16 @@ fn replace_ranges_with_wildcard(orig: &str, ranges: Vec<&(usize, String)>) -> St
         .unwrap()
         .replace_all(&new_line, "*")
         .to_string()
+}
+
+fn merge_ranges(ranges: Vec<&str>) -> String {
+    let expanded = ranges.into_iter().map(|range| {
+        expand_range(range.to_string())
+            .into_iter()
+            .map(|x| x.chars().nth(0).unwrap())
+    });
+    let all_chars = expanded.clone().flatten().unique().collect::<Vec<_>>();
+    format!("[{}]", to_range(all_chars))
 }
 
 #[allow(dead_code)]
@@ -445,6 +460,77 @@ impl Refactor {
             }
             break;
         }
+
+        // merge ranges (e.g. a/[b-c], a/[df] -> a/[b-df])
+        let file = self.file();
+        let sets = file
+            .content
+            .iter()
+            .filter_map(|line| match &line.content {
+                Content::Pattern(path) => {
+                    if path.contains('[') {
+                        Some(path)
+                    } else {
+                        None
+                    }
+                }
+                _ => None,
+            })
+            .collect::<Vec<_>>();
+        let separator = Regex::new(r"(\[.*?\])").unwrap();
+        for size in (2..=sets.len()).rev() {
+            let sets = sets.iter().combinations(size);
+            'outer: for set in sets {
+                let parts = set
+                    .iter()
+                    .map(|x| separator.split(x).collect::<Vec<_>>())
+                    .collect::<Vec<_>>();
+                if parts.iter().all_equal() {
+                    let mut set_iter = set.iter();
+                    let mut ranges_table = separator
+                        .captures_iter(set_iter.next().unwrap())
+                        .map(|caps| vec![caps.get(1).unwrap().as_str()])
+                        .collect::<Vec<_>>();
+                    while let Some(pat) = set_iter.next() {
+                        let ranges = separator
+                            .captures_iter(pat)
+                            .map(|caps| caps.get(1).unwrap().as_str())
+                            .collect::<Vec<_>>();
+                        if ranges_table.len() != ranges.len() {
+                            continue 'outer;
+                        }
+                        for (i, range) in ranges.iter().enumerate() {
+                            ranges_table[i].push(range);
+                        }
+                    }
+                    let merged_ranges = ranges_table
+                        .into_iter()
+                        .map(|ranges| merge_ranges(ranges))
+                        .collect::<Vec<_>>();
+                    let new_line = parts.iter().nth(0).unwrap().into_iter().enumerate().fold(
+                        String::new(),
+                        |acc, (i, part)| {
+                            format!(
+                                "{}{}{}",
+                                acc,
+                                part,
+                                if i < merged_ranges.len() {
+                                    merged_ranges[i].clone()
+                                } else {
+                                    "".to_string()
+                                }
+                            )
+                        },
+                    );
+                    let file = self.file_mut();
+                    for line in set {
+                        file.replace_line(line.to_string(), new_line.clone(), verbose);
+                    }
+                    file.remove_dupl();
+                }
+            }
+        }
+
         self.finish(true, "merge", line_num);
         self
     }
@@ -538,11 +624,11 @@ mod tests {
     #[test]
     fn test_to_range() {
         assert_eq!(to_range(vec!['a', 'b', 'c', 'd']), "a-d".to_string());
-        assert_eq!(to_range(vec!['a', 'b', 'c', 'e']), "a-ce".to_string());
-        assert_eq!(to_range(vec!['a', 'b', 'd', 'e']), "a-bd-e".to_string());
+        assert_eq!(to_range(vec!['c', 'b', 'a', 'e']), "a-ce".to_string());
+        assert_eq!(to_range(vec!['a', 'b', 'd', 'e']), "abde".to_string());
         assert_eq!(to_range(vec!['a', 'c', 'd', 'e']), "ac-e".to_string());
         assert_eq!(to_range(vec!['a', 'b', 'c']), "a-c".to_string());
-        assert_eq!(to_range(vec!['a', 'b']), "a-b".to_string());
+        assert_eq!(to_range(vec!['a', 'b']), "ab".to_string());
         assert_eq!(to_range(vec!['a']), "a".to_string());
     }
 
@@ -570,5 +656,15 @@ mod tests {
             ),
             "a*c".to_string()
         );
+    }
+
+    #[test]
+    fn test_merge_ranges() {
+        assert_eq!(
+            merge_ranges(vec!["[1-3]", "[4-6]", "[7-9]"]),
+            "[1-9]".to_string()
+        );
+        assert_eq!(merge_ranges(vec!["[1-3]", "[47]"]), "[1-47]".to_string());
+        assert_eq!(merge_ranges(vec!["[2-5]", "[14]"]), "[1-5]".to_string());
     }
 }
