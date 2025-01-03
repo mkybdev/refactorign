@@ -13,7 +13,6 @@ pub struct State {
     pub level: u8,
     pub tree: DirectoryTree,
     pub prev: Option<Box<State>>,
-    report: Vec<String>,
 }
 
 struct StateFileValue<'a> {
@@ -38,7 +37,6 @@ impl State {
             level,
             tree: DirectoryTree::new(),
             prev: None,
-            report: Vec::new(),
         }
     }
     pub fn lines_diff(&self) -> usize {
@@ -50,12 +48,14 @@ impl State {
 pub struct Refactor {
     pub state: State,
     pub pended: Option<State>,
+    report: Vec<String>,
 }
 impl Refactor {
     pub fn new(path: &Path, level: u8, verbose: bool) -> Self {
         Refactor {
             state: State::new(path, level, verbose),
             pended: None,
+            report: Vec::new(),
         }
     }
     pub fn verbose(&self) -> bool {
@@ -91,8 +91,20 @@ impl Refactor {
     pub fn pended(&self) -> Option<State> {
         self.pended.clone()
     }
+    pub fn skip_report(&mut self) {
+        let last = self.report.pop().unwrap();
+        self.report.push(format!(
+            "{}{}",
+            last,
+            if last.ends_with(" 0") {
+                ""
+            } else {
+                " (Skipped)"
+            }
+        ));
+    }
     pub fn write_report(&mut self, lines: Vec<String>) {
-        self.state.report.extend(lines.into_iter());
+        self.report.extend(lines.into_iter());
     }
     pub fn get_borrows(&self) -> (bool, PathBuf, DirectoryTree, File) {
         let state = self.state.clone();
@@ -108,7 +120,6 @@ impl Refactor {
         )
     }
     fn update(&mut self, violate: bool) {
-        println!("UPDATE\r\n");
         if !violate {
             self.pended = None;
         } else {
@@ -119,16 +130,29 @@ impl Refactor {
         }
     }
     fn back(&mut self) {
-        println!("BACKTRACK\r\n");
         self.state = self.pended().unwrap();
         self.pended = None;
     }
     pub fn finish(&mut self, violate: bool, process: &str, line_num: usize) {
         if let Some(pended) = self.pended() {
-            if self.state.lines_diff() > pended.lines_diff() {
+            if self.state.lines_diff() >= pended.lines_diff() {
+                if pended.lines_diff() > 0 {
+                    self.skip_report();
+                }
+                self.write_report(vec![format!(
+                    "Lines reduced by {} process: {}",
+                    process,
+                    line_num - self.file().content.len()
+                )]);
                 self.update(violate);
             } else {
-                self.write_report(vec![format!("(Skipped {} process)", process)]);
+                let dec = line_num - self.file().content.len();
+                self.write_report(vec![format!(
+                    "Lines reduced by {} process: {}{}",
+                    process,
+                    dec,
+                    if dec > 0 { " (Skipped)" } else { "" }
+                )]);
                 self.back();
             }
         } else {
@@ -222,7 +246,7 @@ impl Refactor {
             ),
             "==================".to_string(),
         ];
-        for line in report_content.iter().chain(self.state.report.iter()) {
+        for line in report_content.iter().chain(self.report.iter()) {
             if let Err(_) = writeln!(file, "{}", line) {
                 fs::remove_file(path).expect(&format!("Failed to remove file: {}", path.display()));
                 eprintln!("Error occurred when writing to file: {}", path.display());

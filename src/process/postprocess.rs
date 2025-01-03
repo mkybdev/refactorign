@@ -9,8 +9,10 @@ impl Refactor {
         }
         let line_num = self.file().content.len();
         self.file_mut().remove_dupl();
-        self.finish(false, "postprocess", line_num);
-        printv!(self.state, self.pended());
+        self.write_report(vec![format!(
+            "Lines reduced by postprocess process: {}",
+            line_num - self.file().content.len()
+        )]);
         if let Some(pended) = self.pended() {
             self.state = pended;
         }
