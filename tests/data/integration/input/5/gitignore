@@ -1,0 +1,6 @@
+*.txt
+/c.txt
+
+a/foo
+a/bar
+a/qux
