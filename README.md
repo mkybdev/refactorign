@@ -6,7 +6,7 @@
 
 ### Install
 
-To install *refactorign*, run:
+To install refactorign, run:
 ```bash
 cargo install --path .
 ``` 
