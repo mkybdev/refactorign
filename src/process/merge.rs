@@ -287,8 +287,18 @@ impl Refactor {
 
                     // can be merged with range notation
                     if let Some(indices) = line_diff_char(set_str.clone()) {
-                        diff_indices = Some(indices);
-                        can_range = true;
+                        if indices
+                            .iter()
+                            .enumerate()
+                            .take(indices.len() - 1)
+                            .any(|(idx, _)| indices[idx] + 1 == indices[idx + 1])
+                        {
+                            diff_indices = None;
+                            can_range = false;
+                        } else {
+                            diff_indices = Some(indices);
+                            can_range = true;
+                        }
                     } else {
                         diff_indices = None;
                         can_range = false;
