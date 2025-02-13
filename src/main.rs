@@ -62,10 +62,11 @@ struct Args {
     /// If set, the tool will run in verbose mode
     #[arg(
         long,
-        help = "If set, the tool will run in verbose mode",
-        default_value_t = false
+        allow_hyphen_values = true,
+        default_value_t = 0,
+        help = "If set, the tool will run in verbose mode (1 - 2, Higher level means more verbose)"
     )]
-    verbose: bool,
+    verbose: isize,
 
     /// If set, the tool will just show whether the original .gitignore file is valid
     #[arg(
@@ -76,7 +77,7 @@ struct Args {
     validate: bool,
 }
 
-fn validate_args(args: &Args) -> (&Path, PathBuf, bool, u8, bool, bool, bool) {
+fn validate_args(args: &Args) -> (&Path, PathBuf, bool, u8, bool, bool, u8) {
     let path = Path::new(args.path.as_deref().unwrap_or("./.gitignore"));
     if let Some(_) = &args.path {
         if !path.exists() {
@@ -108,6 +109,13 @@ fn validate_args(args: &Args) -> (&Path, PathBuf, bool, u8, bool, bool, bool) {
         std::process::exit(1);
     }
 
+    if args.verbose > 2 || args.verbose < 0 {
+        eprintln!(
+            "Error: Invalid verbose level. The verbose level must be between 0 and 2."
+        );
+        std::process::exit(1);
+    }
+
     (
         path,
         destination.to_path_buf(),
@@ -115,7 +123,7 @@ fn validate_args(args: &Args) -> (&Path, PathBuf, bool, u8, bool, bool, bool) {
         args.level as u8,
         args.report,
         args.validate,
-        args.verbose,
+        args.verbose as u8,
     )
 }
 
@@ -139,8 +147,8 @@ fn main() {
         }
         println!("The .gitignore file is valid.");
     } else {
-        let result = if verbose {
-            Refactor::run_verbose(path, level)
+        let result = if verbose != 0 {
+            Refactor::run_verbose(path, level, verbose)
         } else {
             Refactor::run(path, level)
         };

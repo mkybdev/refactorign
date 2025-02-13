@@ -34,16 +34,16 @@ impl File {
     pub fn get_line(&self, i: usize) -> &Line {
         &self.content[i]
     }
-    pub fn add_line(&mut self, l: String, verbose: bool) {
+    pub fn add_line(&mut self, l: String, verbose: u8) {
         self.content.push(Line {
             content: Content::Pattern(l.clone()),
             line_number: self.content.len() + 1,
         });
-        if verbose {
+        if verbose > 0 {
             println!("Added: {}\r\n", l);
         }
     }
-    pub fn remove_line(&mut self, l: String, verbose: bool) {
+    pub fn remove_line(&mut self, l: String, verbose: u8) {
         let i = self
             .content
             .iter()
@@ -54,18 +54,18 @@ impl File {
             .unwrap();
         self.remove_line_with_index(i, verbose);
     }
-    pub fn remove_line_with_index(&mut self, i: usize, verbose: bool) {
+    pub fn remove_line_with_index(&mut self, i: usize, verbose: u8) {
         let removed = self.content.remove(i);
         self.content.iter_mut().for_each(|l| {
             if l.line_number > i {
                 l.line_number -= 1;
             }
         });
-        if verbose {
+        if verbose > 0 {
             println!("Removed: {}\r\n", removed.content.unwrap());
         }
     }
-    pub fn remove_line_with_path(&mut self, path: PathBuf, verbose: bool) {
+    pub fn remove_line_with_path(&mut self, path: PathBuf, verbose: u8) {
         let i = self
             .content
             .iter()
@@ -112,7 +112,7 @@ impl File {
                 l.line_number -= 1;
             }
         });
-        if verbose {
+        if verbose > 0 {
             println!("Removed: {:?}\r\n", path);
         }
     }
@@ -124,7 +124,7 @@ impl File {
                 let mut j = i + 1;
                 while j < self.content.len() {
                     if target == self.get_line(j).content {
-                        self.remove_line_with_index(j, false);
+                        self.remove_line_with_index(j, 0);
                     } else {
                         j += 1;
                     }
@@ -133,17 +133,17 @@ impl File {
             i += 1;
         }
     }
-    pub fn replace_line_with_index(&mut self, i: usize, l: String, verbose: bool) {
+    pub fn replace_line_with_index(&mut self, i: usize, l: String, verbose: u8) {
         let old = self.content[i].content.clone();
         self.content[i] = Line {
             content: Content::Pattern(l.clone()),
             line_number: i + 1,
         };
-        if verbose {
+        if verbose > 0 {
             println!("Replaced: {} -> {}\r\n", old.unwrap(), l);
         }
     }
-    pub fn replace_line(&mut self, from: String, to: String, verbose: bool) {
+    pub fn replace_line(&mut self, from: String, to: String, verbose: u8) {
         let i = self
             .content
             .iter()

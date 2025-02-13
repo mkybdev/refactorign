@@ -177,7 +177,7 @@ fn get_ign_children(
 impl Refactor {
     pub fn re_include(&mut self) -> &mut Self {
         let (verbose, root, tree, file) = self.get_borrows();
-        if verbose {
+        if verbose == 2 {
             printv!(root, tree, file);
         }
 
@@ -230,14 +230,14 @@ impl Refactor {
                                 parent_path.clone(),
                                 file.path.clone(),
                             );
-                            if verbose {
+                            if verbose == 2 {
                                 printv!(parent_path, ign_children, ign_children_lines, children);
                             }
                             if 1 + children_num - ign_children_num < ign_children_lines_num {
                                 let file = self.file_mut();
                                 // remove lines
                                 for child_path in ign_children_lines.clone().into_iter() {
-                                    // println!("Removing: {:?}", child_path);
+                                    println!("Removing: {:?}", child_path);
                                     file.remove_line_with_path(
                                         if child_path.to_str().unwrap().contains("/") {
                                             child_path
@@ -291,7 +291,7 @@ mod tests {
         for level in 1..=1 {
             for path in test::get_input_paths("re_include") {
                 test::show_title(&path, level);
-                let refactor = &mut Refactor::new(&path, level, true);
+                let refactor = &mut Refactor::new(&path, level, 2);
                 let result = refactor.preprocess().re_include().postprocess();
                 show_result!(&result.file());
                 assert!(test::file_cmp(

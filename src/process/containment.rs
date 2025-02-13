@@ -9,7 +9,7 @@ use super::refactor::Refactor;
 impl Refactor {
     pub fn containment(&mut self) -> &mut Self {
         let (verbose, root, tree, file) = self.get_borrows();
-        if verbose {
+        if verbose == 2 {
             printv!(root, tree, file);
         }
 
@@ -69,7 +69,7 @@ mod tests {
         for level in 1..=1 {
             for path in test::get_input_paths("containment") {
                 test::show_title(&path, level);
-                let refactor = &mut Refactor::new(&path, level, true);
+                let refactor = &mut Refactor::new(&path, level, 2);
                 let result = refactor.preprocess().containment().postprocess();
                 show_result!(&result.file());
                 assert!(test::file_cmp(

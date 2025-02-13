@@ -215,7 +215,7 @@ impl Refactor {
     pub fn merge(&mut self) -> &mut Self {
         // iterate over all of the sets of lines, from largest to smallest
         let (verbose, root, tree, file) = self.get_borrows();
-        if verbose {
+        if verbose == 2 {
             printv!(root, tree, file);
         }
 
@@ -344,7 +344,7 @@ impl Refactor {
                                 .iter()
                                 .all(|child| !does_match(child, &new_line))
                             {
-                                if verbose {
+                                if verbose == 1 {
                                     println!("Merging with wildcard:\r\n");
                                     // printv!(new_line);
                                 }
@@ -394,7 +394,7 @@ impl Refactor {
                     if can_range {
                         let file = self.file_mut();
                         if let Some(diff_indices) = diff_indices {
-                            if verbose {
+                            if verbose == 1 {
                                 println!("Merging with range:\r\n");
                                 printv!(diff_indices);
                             }
@@ -555,7 +555,7 @@ mod tests {
         for level in 1..=1 {
             for path in test::get_input_paths("merge") {
                 test::show_title(&path, level);
-                let refactor = &mut Refactor::new(&path, level, true);
+                let refactor = &mut Refactor::new(&path, level, 2);
                 let result = refactor.preprocess().merge().postprocess();
                 show_result!(&result.file());
                 assert!(test::file_cmp(

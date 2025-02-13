@@ -4,7 +4,7 @@ use crate::{printv, tree::DirectoryTree, Refactor};
 impl Refactor {
     pub fn postprocess(&mut self) -> &mut Self {
         let (verbose, root, tree, file) = self.get_borrows();
-        if verbose {
+        if verbose == 2 {
             printv!(root, tree, file);
         }
         let line_num = self.file().content.len();
@@ -29,7 +29,7 @@ mod tests {
         for level in 1..=1 {
             for path in test::get_input_paths("postprocess") {
                 test::show_title(&path, level);
-                let refactor = &mut Refactor::new(&path, level, true);
+                let refactor = &mut Refactor::new(&path, level, 2);
                 let result = refactor.preprocess().postprocess();
                 show_result!(&result.file());
                 assert!(test::file_cmp(

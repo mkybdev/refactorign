@@ -1,4 +1,5 @@
 use crate::core::{file::File, tree::DirectoryTree};
+// use crate::parse::parse;
 use std::cell::{Ref, RefCell};
 use std::fs;
 use std::io::Write;
@@ -6,7 +7,7 @@ use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone)]
 pub struct State {
-    verbose: bool,
+    verbose: u8,
     orig_file: File,
     file: RefCell<File>,
     pub root: PathBuf,
@@ -26,7 +27,7 @@ impl StateFileValue<'_> {
 }
 
 impl State {
-    pub fn new(path: &Path, level: u8, verbose: bool) -> Self {
+    pub fn new(path: &Path, level: u8, verbose: u8) -> Self {
         let mut root = path.to_path_buf();
         root.pop();
         State {
@@ -51,14 +52,14 @@ pub struct Refactor {
     report: Vec<String>,
 }
 impl Refactor {
-    pub fn new(path: &Path, level: u8, verbose: bool) -> Self {
+    pub fn new(path: &Path, level: u8, verbose: u8) -> Self {
         Refactor {
             state: State::new(path, level, verbose),
             pended: None,
             report: Vec::new(),
         }
     }
-    pub fn verbose(&self) -> bool {
+    pub fn verbose(&self) -> u8 {
         self.state.verbose
     }
     pub fn level(&self) -> u8 {
@@ -106,7 +107,7 @@ impl Refactor {
     pub fn write_report(&mut self, lines: Vec<String>) {
         self.report.extend(lines.into_iter());
     }
-    pub fn get_borrows(&self) -> (bool, PathBuf, DirectoryTree, File) {
+    pub fn get_borrows(&self) -> (u8, PathBuf, DirectoryTree, File) {
         let state = self.state.clone();
         (
             state.verbose,
@@ -134,6 +135,11 @@ impl Refactor {
         self.pended = None;
     }
     pub fn finish(&mut self, violate: bool, process: &str, line_num: usize) {
+        // let violate = self
+        //     .file()
+        //     .content
+        //     .iter()
+        //     .any(|line| parse(line.content.unwrap()) == None);
         if let Some(pended) = self.pended() {
             if self.state.lines_diff() >= pended.lines_diff() {
                 if pended.lines_diff() > 0 {
@@ -182,7 +188,7 @@ impl Refactor {
     pub fn is_ignored(&self, path: &Path) -> bool {
         self.is_normally_ignored(path) || self.is_globally_ignored(path)
     }
-    fn run_inner(path: &Path, level: u8, verbose: bool) -> Refactor {
+    fn run_inner(path: &Path, level: u8, verbose: u8) -> Refactor {
         let refactor = &mut Refactor::new(path, level, verbose);
         refactor
             .preprocess()
@@ -193,10 +199,10 @@ impl Refactor {
             .clone()
     }
     pub fn run(path: &Path, level: u8) -> Refactor {
-        Self::run_inner(path, level, false)
+        Self::run_inner(path, level, 0)
     }
-    pub fn run_verbose(path: &Path, level: u8) -> Refactor {
-        Self::run_inner(path, level, true)
+    pub fn run_verbose(path: &Path, level: u8, verbose: u8) -> Refactor {
+        Self::run_inner(path, level, verbose)
     }
     pub fn save(&self, path: PathBuf) {
         let f = fs::File::create(path.clone()).expect(&format!(
